@@ -1,6 +1,6 @@
 import { Role, UserStatus } from "@prisma/client";
 import { prisma } from "../src/db/prisma";
-import crypto from "crypto";
+import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -15,8 +15,8 @@ const DEFAULT_CATEGORIES = [
   { name: "Other", description: "General utility and uncategorized donations", icon: "box" },
 ];
 
-function hashPassword(password: string): string {
-  return crypto.createHash("sha256").update(password).digest("hex");
+async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 10);
 }
 
 async function main() {
@@ -41,16 +41,18 @@ async function main() {
   const adminPassword = process.env.ADMIN_PASSWORD;
 
   if (adminEmail && adminPassword) {
+    const passwordHash = await hashPassword(adminPassword);
     const adminUser = await prisma.user.upsert({
       where: { email: adminEmail },
       update: {
         role: Role.ADMIN,
         status: UserStatus.ACTIVE,
+        passwordHash,
       },
       create: {
         email: adminEmail,
         name: "DonateConnect Admin",
-        passwordHash: hashPassword(adminPassword),
+        passwordHash,
         role: Role.ADMIN,
         status: UserStatus.ACTIVE,
         emailVerifiedAt: new Date(),

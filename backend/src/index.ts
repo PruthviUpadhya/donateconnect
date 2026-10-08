@@ -9,6 +9,10 @@ import authRouter from "./routes/auth.route";
 import uploadRouter from "./routes/upload.route";
 import fileRouter from "./routes/file.route";
 import donationRouter from "./routes/donation.route";
+import volunteerRouter from "./routes/volunteer.route";
+import dashboardRouter from "./routes/dashboard.route";
+import collaborationRouter from "./routes/collaboration.route";
+import impactRouter from "./routes/impact.route";
 import { errorMiddleware } from "./middleware/error.middleware";
 
 const app = express();
@@ -58,7 +62,10 @@ apiV1Router.use("/auth", authRouter); // /api/v1/auth/*
 apiV1Router.use("/uploads", uploadRouter); // /api/v1/uploads
 apiV1Router.use("/files", fileRouter); // /api/v1/files/:id
 apiV1Router.use(donationRouter); // /api/v1/donations, /api/v1/ngos, /api/v1/ngo/donations/*
-apiV1Router.use(authRouter); // /api/v1/me and /api/v1/me (alias)
+apiV1Router.use(volunteerRouter); // /api/v1/volunteer/*, /api/v1/ngo/volunteers, /api/v1/ngo/inventory
+apiV1Router.use(dashboardRouter); // /api/v1/donor/dashboard, /api/v1/ngo/reports, /api/v1/admin/*
+apiV1Router.use(collaborationRouter); // /api/v1/ratings, /api/v1/chat/*, /api/v1/ngo/team, /api/v1/ngo/notes, /api/v1/ngo/analytics
+apiV1Router.use(impactRouter); // /api/v1/impact/*
 
 apiV1Router.get("/", (req: Request, res: Response) => {
   res.json({

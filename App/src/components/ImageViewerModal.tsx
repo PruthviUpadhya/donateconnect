@@ -9,8 +9,10 @@ import {
   Dimensions,
   Platform,
   ActivityIndicator,
+  Alert,
 } from "react-native";
-import { X, ChevronLeft, ChevronRight } from "lucide-react-native";
+import * as Linking from "expo-linking";
+import { X, ChevronLeft, ChevronRight, ExternalLink, FileText, Download } from "lucide-react-native";
 import { Colors, Spacing, Typography, BorderRadius } from "../theme/colors";
 
 interface ImageViewerModalProps {
@@ -30,10 +32,12 @@ export function ImageViewerModal({
 }: ImageViewerModalProps) {
   const [currentIndex, setCurrentIndex] = React.useState(initialIndex);
   const [loading, setLoading] = React.useState(false);
+  const [loadError, setLoadError] = React.useState(false);
 
   React.useEffect(() => {
     if (visible) {
       setCurrentIndex(initialIndex >= 0 && initialIndex < images.length ? initialIndex : 0);
+      setLoadError(false);
     }
   }, [visible, initialIndex, images.length]);
 
@@ -42,15 +46,37 @@ export function ImageViewerModal({
   const currentUri = images[currentIndex];
   const hasMultiple = images.length > 1;
 
+  // Detect if current file is likely a PDF
+  const isPdf =
+    currentUri?.toLowerCase().includes(".pdf") ||
+    title?.toLowerCase().includes("certificate") ||
+    title?.toLowerCase().includes("pan") ||
+    title?.toLowerCase().includes("document");
+
   const handlePrev = () => {
     if (currentIndex > 0) {
       setCurrentIndex((prev) => prev - 1);
+      setLoadError(false);
     }
   };
 
   const handleNext = () => {
     if (currentIndex < images.length - 1) {
       setCurrentIndex((prev) => prev + 1);
+      setLoadError(false);
+    }
+  };
+
+  const handleOpenExternally = async () => {
+    try {
+      const canOpen = await Linking.canOpenURL(currentUri);
+      if (canOpen) {
+        await Linking.openURL(currentUri);
+      } else {
+        await Linking.openURL(currentUri);
+      }
+    } catch {
+      Alert.alert("Unable to open", "Could not open document link externally.");
     }
   };
 
@@ -72,18 +98,29 @@ export function ImageViewerModal({
               </Text>
             )}
           </View>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={onClose}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <X size={24} color="#FFFFFF" />
-          </TouchableOpacity>
+
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <TouchableOpacity
+              style={styles.actionIconBtn}
+              onPress={handleOpenExternally}
+              accessibilityLabel="Open document in browser"
+            >
+              <ExternalLink size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={onClose}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <X size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Main Image Container */}
+        {/* Main Content Area */}
         <View style={styles.imageContainer}>
-          {loading && (
+          {loading && !loadError && (
             <ActivityIndicator
               size="large"
               color={Colors.primary}
@@ -91,13 +128,39 @@ export function ImageViewerModal({
             />
           )}
 
-          <Image
-            source={{ uri: currentUri }}
-            style={styles.image}
-            resizeMode="contain"
-            onLoadStart={() => setLoading(true)}
-            onLoadEnd={() => setLoading(false)}
-          />
+          {!loadError ? (
+            <Image
+              source={{ uri: currentUri }}
+              style={styles.image}
+              resizeMode="contain"
+              onLoadStart={() => setLoading(true)}
+              onLoadEnd={() => setLoading(false)}
+              onError={() => {
+                setLoading(false);
+                setLoadError(true);
+              }}
+            />
+          ) : (
+            // PDF or Unsupported Image Fallback Card
+            <View style={styles.fallbackCard}>
+              <View style={styles.fallbackIconCircle}>
+                <FileText size={48} color={Colors.primary} />
+              </View>
+              <Text style={styles.fallbackTitle}>Document Preview</Text>
+              <Text style={styles.fallbackDesc}>
+                This file is a PDF document or official certificate. Tap below to inspect or open in full-screen reader.
+              </Text>
+
+              <TouchableOpacity
+                style={styles.openDocButton}
+                activeOpacity={0.8}
+                onPress={handleOpenExternally}
+              >
+                <Download size={18} color="#FFFFFF" />
+                <Text style={styles.openDocButtonText}>Open / View Document</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Left / Right navigation arrows */}
           {hasMultiple && currentIndex > 0 && (
@@ -121,6 +184,17 @@ export function ImageViewerModal({
           )}
         </View>
 
+        {/* Bottom Bar with direct Open button for easy access */}
+        <View style={styles.bottomBar}>
+          <TouchableOpacity
+            style={styles.bottomLinkButton}
+            onPress={handleOpenExternally}
+          >
+            <ExternalLink size={16} color="rgba(255,255,255,0.9)" />
+            <Text style={styles.bottomLinkText}>Open Full File in Browser / Viewer</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Bottom Thumbnail Strip if multiple images */}
         {hasMultiple && (
           <View style={styles.thumbnailStrip}>
@@ -129,7 +203,10 @@ export function ImageViewerModal({
               return (
                 <TouchableOpacity
                   key={idx}
-                  onPress={() => setCurrentIndex(idx)}
+                  onPress={() => {
+                    setCurrentIndex(idx);
+                    setLoadError(false);
+                  }}
                   style={[
                     styles.thumbnailWrapper,
                     isSelected ? styles.thumbnailSelected : null,
@@ -151,7 +228,7 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.92)",
+    backgroundColor: "rgba(0, 0, 0, 0.94)",
     justifyContent: "space-between",
     alignItems: "center",
   },
@@ -172,18 +249,26 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   counterText: {
     color: "rgba(255, 255, 255, 0.7)",
     fontSize: 13,
     marginTop: 2,
   },
+  actionIconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   closeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -197,6 +282,76 @@ const styles = StyleSheet.create({
   image: {
     width: screenWidth * 0.95,
     height: screenHeight * 0.72,
+  },
+  fallbackCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xl,
+    alignItems: "center",
+    maxWidth: 340,
+    width: "88%",
+    gap: Spacing.sm,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  fallbackIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#eff6ff",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: Spacing.xs,
+  },
+  fallbackTitle: {
+    ...Typography.titleSmall,
+    fontSize: 18,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+  },
+  fallbackDesc: {
+    ...Typography.body,
+    fontSize: 13,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    lineHeight: 18,
+  },
+  openDocButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.xs,
+  },
+  openDocButtonText: {
+    color: "#ffffff",
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  bottomBar: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    alignItems: "center",
+  },
+  bottomLinkButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: BorderRadius.full,
+    backgroundColor: "rgba(255, 255, 255, 0.12)",
+  },
+  bottomLinkText: {
+    color: "#ffffff",
+    fontSize: 13,
+    fontWeight: "600",
   },
   navButton: {
     position: "absolute",

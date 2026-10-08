@@ -43,6 +43,31 @@ export default function CreateDonationScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Phase 7: Live Impact Estimation state
+  const [impactEstimate, setImpactEstimate] = useState<any | null>(null);
+
+  useEffect(() => {
+    const qty = parseFloat(quantity);
+    if (!qty || qty <= 0) {
+      setImpactEstimate(null);
+      return;
+    }
+
+    const catObj = categories.find((c) => c.id === selectedCategoryId || c.name === selectedCategoryId);
+    const catName = catObj?.name || "Other";
+
+    // Request deterministic impact estimate
+    api.request<{ success: boolean; data: { estimate: any } }>(
+      `/impact/estimate?categoryName=${encodeURIComponent(catName)}&quantity=${qty}`
+    )
+      .then((res) => {
+        if (res.data?.estimate) {
+          setImpactEstimate(res.data.estimate);
+        }
+      })
+      .catch(() => {});
+  }, [quantity, selectedCategoryId, categories]);
+
   useEffect(() => {
     async function loadCategories() {
       try {
@@ -220,6 +245,30 @@ export default function CreateDonationScreen() {
               />
             </View>
           </View>
+
+          {/* Phase 7: Live Projected Impact Banner */}
+          {impactEstimate && (
+            <View style={styles.impactCard}>
+              <View style={styles.impactCardHeader}>
+                <Text style={styles.impactCardTitle}>🌱 Estimated Community & Eco Impact</Text>
+                <View style={styles.estimateBadge}>
+                  <Text style={styles.estimateBadgeText}>ESTIMATE</Text>
+                </View>
+              </View>
+              <Text style={styles.impactDescription}>{impactEstimate.description}</Text>
+              <View style={styles.impactMetricsRow}>
+                <View style={styles.impactMetricItem}>
+                  <Text style={styles.impactMetricValue}>~{impactEstimate.estimatedPeopleHelped}</Text>
+                  <Text style={styles.impactMetricLabel}>People Benefited</Text>
+                </View>
+                <View style={styles.impactMetricDivider} />
+                <View style={styles.impactMetricItem}>
+                  <Text style={styles.impactMetricValue}>{impactEstimate.co2DivertedKg} kg</Text>
+                  <Text style={styles.impactMetricLabel}>CO₂ Diverted</Text>
+                </View>
+              </View>
+            </View>
+          )}
 
           {/* Description */}
           <Input
@@ -461,5 +510,68 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     fontWeight: "600",
     color: Colors.textSecondary,
+  },
+  impactCard: {
+    backgroundColor: "#f0fdf4",
+    borderWidth: 1,
+    borderColor: "#bbf7d0",
+    borderRadius: 8,
+    padding: Spacing.sm + 4,
+    gap: 6,
+    marginVertical: 4,
+  },
+  impactCardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  impactCardTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#166534",
+  },
+  estimateBadge: {
+    backgroundColor: "#dcfce7",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  estimateBadgeText: {
+    fontSize: 9,
+    fontWeight: "800",
+    color: "#15803d",
+    letterSpacing: 0.5,
+  },
+  impactDescription: {
+    fontSize: 12,
+    color: "#166534",
+    lineHeight: 16,
+  },
+  impactMetricsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderRadius: 6,
+    padding: 8,
+    marginTop: 2,
+  },
+  impactMetricItem: {
+    flex: 1,
+    alignItems: "center",
+  },
+  impactMetricValue: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#15803d",
+  },
+  impactMetricLabel: {
+    fontSize: 10,
+    color: "#166534",
+    marginTop: 1,
+  },
+  impactMetricDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: "#bbf7d0",
   },
 });
