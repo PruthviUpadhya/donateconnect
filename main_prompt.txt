@@ -1,0 +1,1046 @@
+DonateConnect — Full-Stack Build Prompt for Antigravity
+You are a senior full-stack engineer, product designer, and UI/UX engineer.
+Build DonateConnect, a mobile-first NGO donation management platform, inside the existing repository.
+Repository:
+[https://github.com/PruthviUpadhya/donateconnect.git](https://github.com/PruthviUpadhya/donateconnect.git)
+IMPORTANT — UNDERSTAND THE CURRENT STATE FIRST
+This is NOT a blank repository.
+The basic Expo/React Native App and Node/Express Backend have already been set up in TypeScript.
+Do NOT convert the project to JavaScript.
+Do NOT rebuild the existing App or Backend from scratch.
+Instead:
+Inspect the entire repository first.
+Understand the existing frontend setup.
+Understand the existing backend setup.
+Inspect all existing package.json files.
+Inspect existing configuration files.
+Inspect App/AGENTS.md if present.
+Inspect the existing API/backend structure.
+Inspect the existing Expo Router/navigation setup if already present.
+Inspect the existing environment files/examples.
+Inspect the reference/ folder.
+Read and understand the relevant reference files before implementing the UI.
+Identify what has already been implemented and what is still missing.
+EXISTING TECHNOLOGY DECISION
+The project is already using TypeScript.
+Keep TypeScript.
+Use:
+.ts
+.tsx
+TypeScript types/interfaces
+ES modules where appropriate
+Do NOT migrate the project to JavaScript.
+Do NOT delete working TypeScript code merely to satisfy an old prompt.
+The earlier specification that said "JavaScript only" is outdated and must be ignored.
+REFERENCE FOLDER — IMPORTANT
+There is a folder named exactly:
+reference/
+Use this folder.
+Do NOT look for a folder named references/.
+The reference/ folder contains design/reference material that was added after an earlier version of this specification.
+Therefore, the reference material must now be incorporated into the implementation.
+Before building the UI:
+inspect every relevant file inside reference/
+understand what each reference represents
+identify reusable visual patterns
+identify layouts
+identify colors
+identify typography
+identify cards
+identify navigation
+identify forms
+identify dashboards
+identify buttons
+identify spacing
+identify interaction patterns
+The references are the primary visual and UX reference.
+Do not simply copy screenshots.
+Instead, extract the underlying design system and implement it natively in React Native.
+Do NOT replace the reference design with a generic AI-generated dashboard.
+FIRST ACTION — REPOSITORY AUDIT
+Before modifying anything, inspect:
+App/ backend/ reference/
+and the root files.
+Then report:
+1. Existing repository structure
+2. Existing App setup
+Mention:
+Expo version
+React version
+Expo Router status
+current navigation
+current screens
+existing components
+existing API configuration
+existing dependencies
+3. Existing backend setup
+Mention:
+Node version if configured
+Express version
+TypeScript configuration
+current routes
+current server entry point
+existing middleware
+existing database code
+existing environment configuration
+4. Database state
+Explicitly confirm:
+Prisma is NOT currently set up.
+Inspect whether any existing PostgreSQL/Neon connection code exists.
+The user has already provided the Neon connection URL/environment configuration.
+Do not replace working database credentials.
+5. Reference analysis
+Report the important design patterns found in:
+reference/
+6. Implementation plan
+Then begin Phase 1 only.
+Do not implement every phase immediately.
+1. PRODUCT
+DonateConnect connects donors with verified NGOs.
+Core workflow:
+Donor → Donation → Nearby NGO → NGO Acceptance → Volunteer Assignment → Pickup → Delivery → Receipt → Impact → Ratings
+The system has four roles:
+DONOR NGO VOLUNTEER ADMIN
+2. TECHNOLOGY STACK
+Frontend
+Use the existing TypeScript setup.
+React Native
+Expo
+Expo Router
+TypeScript
+TanStack Query
+React Hook Form
+Zod
+Expo Secure Store
+Expo Image Picker
+Expo Document Picker
+Expo Location
+Use the Expo version already installed in the project.
+Do not upgrade major versions unless absolutely necessary.
+Read the relevant Expo documentation before implementing Expo APIs.
+Use:
+npx expo install <package>
+for Expo packages.
+Do not manually create or modify:
+ios/ android/
+3. BACKEND
+Use the existing TypeScript backend.
+Technology:
+Node.js
+Express 5
+TypeScript
+Prisma
+PostgreSQL
+Neon
+Do NOT convert the backend to JavaScript.
+Preserve the existing TypeScript architecture wherever possible.
+Base API:
+/api/v1
+Keep:
+GET /health
+at the root.
+4. DATABASE — PRISMA MUST BE SET UP
+Current state
+Prisma has NOT been set up yet.
+This is one of the primary tasks for Phase 1.
+The user has already provided the Neon database connection URL/environment configuration.
+Inspect the existing .env / .env.example files first.
+Do not overwrite working environment variables unnecessarily.
+Set up Prisma properly for the existing TypeScript backend.
+Use:
+PostgreSQL
+Neon
+Prisma ORM
+@prisma/adapter-neon
+Do NOT introduce a raw pg Pool as the primary database layer.
+All normal application database access must go through Prisma.
+Raw SQL is allowed only when Prisma cannot reasonably express the operation, particularly the nearby-NGO geospatial query.
+5. PRISMA + NEON CONFIGURATION
+Before implementing Prisma, check the current Prisma documentation for the installed/current Prisma version.
+Do not blindly use an outdated Prisma setup.
+The application should use:
+DATABASE_URL=
+for the pooled Neon connection used by the application.
+Use:
+DIRECT_URL=
+for the direct/non-pooled connection used by Prisma migrations if required by the current Prisma setup.
+The existing Neon connection details provided by the user should be preserved.
+Do not hardcode credentials.
+Do not commit .env.
+6. PRISMA STRUCTURE
+Create the appropriate Prisma structure for the existing TypeScript backend.
+Expected structure:
+backend/ ├── prisma/ │ ├── schema.prisma │ ├── seed.ts │ └── migrations/ ├── src/ │ ├── config/ │ ├── db/ │ │ └── prisma.ts │ ├── middleware/ │ ├── modules/ │ ├── services/ │ └── utils/ ├── prisma.config.* ├── package.json └── .env.example
+Adapt this structure to the existing backend rather than unnecessarily restructuring the entire project.
+Create one shared Prisma client:
+backend/src/db/prisma.ts
+Every service should use the shared Prisma client.
+Do not create a new PrismaClient in every module.
+7. PRISMA SCHEMA
+Use UUID primary keys.
+Models should use:
+createdAt updatedAt
+where appropriate.
+Use enums for statuses.
+Add indexes for:
+foreign keys
+frequently queried status fields
+status + createdAt
+common filtering fields
+Implement:
+User
+id
+role
+name
+email
+passwordHash
+phone
+address
+latitude
+longitude
+emailVerifiedAt
+status
+OtpCode
+user
+purpose
+codeHash
+expiresAt
+attempts
+consumedAt
+Never store raw OTP codes.
+Ngo
+owner
+name
+registrationCertificateUrl
+panCardUrl
+officialEmail
+contactNumber
+addressProofUrl
+address
+latitude
+longitude
+websiteUrl
+socialLinks
+verificationStatus
+verifiedBy
+verifiedAt
+rejectionReason
+NgoMember
+ngo
+user
+teamRole
+Roles:
+OWNER MANAGER STAFF
+VolunteerProfile
+user
+availability
+vehicleType
+ratingAvg
+ratingCount
+tasksCompleted
+rewardPoints
+NgoVolunteer
+ngo
+volunteer
+status
+DonationCategory
+Seed:
+Food Clothes Books Medical supplies Electronics Furniture Other
+Donation
+donor
+category
+description
+quantity
+unit
+pickupAddress
+pickupLatitude
+pickupLongitude
+status
+acceptedByNgo
+transition timestamps
+DonationImage
+donation
+url
+sortOrder
+DonationNgoResponse
+donation
+ngo
+response
+reason
+Assignment
+donation
+ngo
+volunteer
+assignedBy
+status
+pickupConfirmedAt
+deliveredAt
+proofPhotoUrl
+notes
+delivery address snapshot
+InventoryItem
+ngo
+donation
+category
+name
+quantity
+unit
+BeneficiaryRequest
+ngo
+title
+category
+quantityNeeded
+quantityFulfilled
+urgency
+status
+DonationMatch
+donation/inventory item
+beneficiaryRequest
+quantity
+Rating
+kind
+from user
+target
+donation
+score
+comment
+Unique per donation + rating kind.
+Receipt
+donation
+receiptNumber
+issuedAt
+impactSummary
+ChatThread
+Donor + NGO + donation.
+ChatMessage
+sender
+body
+readAt
+InternalNote
+ngo
+donation optional
+author
+body
+Complaint
+raisedBy
+against user/NGO
+donation optional
+subject
+description
+status
+resolution
+handledBy
+Notification
+user
+type
+title
+body
+data
+readAt
+RewardEvent
+user
+points
+reason
+FraudFlag
+subject
+ruleCode
+score
+details
+status
+AuditLog
+actor
+action
+entityType
+entityId
+meta
+8. PRISMA SEED
+Create:
+backend/prisma/seed.ts
+Use the existing TypeScript configuration.
+Seed:
+Donation categories.
+Initial admin using:
+ADMIN_EMAIL= ADMIN_PASSWORD=
+Only create demo users/data when:
+NODE_ENV !== production
+and an explicit demo flag is supplied.
+Never create fake production data.
+9. SHARED PRISMA CLIENT
+Create:
+backend/src/db/prisma.ts
+Use the appropriate Prisma adapter/client configuration for the installed Prisma version.
+Ensure development hot reload does not unnecessarily create multiple Prisma clients.
+All backend services should import this shared instance.
+10. HEALTH CHECK
+The existing:
+GET /health
+must continue working.
+Once Prisma is configured, the database health check should use Prisma.
+For example:
+await prisma.$queryRaw`SELECT 1`;
+Return something similar to:
+{ "status": "ok", "database": "connected" }
+Adapt the response to the existing API conventions if one already exists.
+Handle Neon cold starts gracefully.
+11. GMAIL SMTP OTP — REQUIRED
+OTP must be sent through SMTP email.
+The user will provide a Gmail account for sending OTP emails.
+Do NOT hardcode the Gmail credentials.
+Do NOT commit them.
+Use environment variables.
+Suggested configuration:
+SMTP_HOST=[smtp.gmail.com](http://smtp.gmail.com/) SMTP_PORT=465 SMTP_SECURE=true SMTP_USER= SMTP_PASSWORD= SMTP_FROM=
+The user will provide:
+SMTP_USER SMTP_PASSWORD SMTP_FROM
+later.
+For Gmail, use a proper Gmail App Password rather than attempting to store the normal Gmail account password.
+The backend should use Nodemailer.
+Create a clean email service/interface so that the rest of the authentication system does not depend directly on Nodemailer.
+For example:
+backend/src/services/email.service.ts
+Implement:
+sendOtpEmail()
+The OTP email should include:
+DonateConnect branding
+verification code
+expiration time
+clear security message
+Example concept:
+Your DonateConnect verification code is 123456. This OTP expires in 10 minutes. If you did not request this code, you can safely ignore this email.
+Do not log OTPs or email credentials in production.
+Development behavior
+If SMTP credentials are not configured during initial local development, allow a clearly documented development fallback that logs the OTP to the server console.
+However:
+production must require SMTP configuration
+production must never silently fall back to console OTPs
+12. AUTHENTICATION
+Use:
+bcrypt/bcryptjs
+JWT access token
+refresh token
+role middleware
+ownership middleware
+Roles:
+DONOR NGO VOLUNTEER ADMIN
+Admin self-registration must NOT be possible.
+First admin comes from the seed.
+13. OTP REQUIREMENTS
+Implement:
+6-digit OTP
+cryptographic/random generation
+hashed OTP storage
+10-minute expiration
+maximum 5 attempts
+consumedAt
+resend rate limiting
+Gmail SMTP delivery
+development fallback only when explicitly configured
+Test:
+valid OTP
+expired OTP
+incorrect OTP
+maximum attempts
+reused OTP
+resend behavior
+14. SECURITY
+Use:
+helmet
+CORS restricted by environment
+express-rate-limit
+request body size limits
+Zod validation
+structured logging
+Validate:
+request body
+query
+params
+using Zod where applicable.
+Error response:
+{ "error": { "code": "ERROR_CODE", "message": "Human readable message", "details": {} } }
+Never expose:
+stack traces
+SQL
+secrets
+passwords
+OTP codes
+in production.
+15. DONATION STATE MACHINE
+Statuses:
+PENDING APPROVED ASSIGNED PICKED_UP DELIVERED REJECTED CANCELLED
+Valid workflow:
+PENDING ↓ APPROVED ↓ ASSIGNED ↓ PICKED_UP ↓ DELIVERED
+Invalid transitions return:
+409 Conflict
+Create one dedicated state-machine service.
+Test it independently.
+16. ATOMIC NGO ACCEPTANCE
+Multiple nearby NGOs can see a pending donation.
+The first NGO to accept wins.
+Implement acceptance as an atomic conditional update.
+Conceptually:
+UPDATE donation SET ... WHERE id = ? AND status = PENDING
+Check the affected row count.
+Only one NGO can successfully accept.
+Use a transaction where appropriate.
+Test two NGOs racing to accept the same donation.
+Expected result:
+NGO A → accepted NGO B → rejected because already accepted
+17. NEARBY NGO SEARCH
+Store:
+latitude longitude
+as floats.
+Use:
+bounding-box filtering
+Haversine distance
+$queryRaw
+Make search radius configurable.
+Only NGOs with:
+verificationStatus = APPROVED
+appear.
+Return results ordered by distance.
+18. FILE UPLOADS
+Database stores URLs only.
+Use a storage abstraction.
+Default:
+Cloudinary
+Support:
+donation images
+NGO registration documents
+PAN documents
+address proof
+PDFs
+Validate:
+MIME type
+file size
+Prefer signed/direct uploads from the mobile app.
+19. DONOR FEATURES
+Dashboard:
+total donations
+items donated
+NGOs supported
+Create Donation:
+category
+description
+quantity
+unit
+pickup location
+photos
+My Donations:
+history
+status
+tracking timeline
+Profile:
+account details
+Nearby NGOs:
+verified NGOs
+distance
+rating
+relevant information
+20. NGO FEATURES
+Dashboard:
+available donations
+active requests
+volunteers
+Donation Management:
+available donations
+accept/reject
+accepted donations
+inventory
+Request Management:
+beneficiary requests
+match donations
+Volunteer Management:
+volunteer roster
+assignment
+tracking
+Reports:
+impact
+performance
+Team:
+owner
+manager
+staff
+Internal Notes:
+private NGO notes
+21. VOLUNTEER FEATURES
+Dashboard:
+assigned tasks
+availability
+performance
+Task:
+pickup location
+donor details
+delivery location
+NGO details
+task status
+Actions:
+Confirm Pickup Confirm Delivery
+Delivery:
+proof photo
+notes
+Volunteers can only see their assigned tasks.
+The donor's exact pickup address and phone must only become visible after assignment.
+22. ADMIN FEATURES
+Dashboard:
+platform statistics
+donation statistics
+NGO statistics
+user statistics
+trends
+NGO Verification:
+pending NGOs
+submitted documents
+approve
+reject
+User Management:
+view
+suspend
+manage
+Donation Monitoring
+Request Monitoring
+Complaint Management
+Platform Reports
+Fraud Flags
+Every state-changing admin action must create an AuditLog.
+23. MOBILE NAVIGATION
+Use the existing Expo Router setup if already present.
+Expected role groups:
+(auth) (donor) (ngo) (volunteer) (admin)
+Do not rebuild navigation if the existing project already has a suitable implementation.
+The root layout should:
+Read authentication state.
+Determine role.
+Redirect to correct role dashboard.
+Prevent unauthorized navigation.
+Redirect unapproved NGOs to verification-pending.
+24. UI/UX — USE reference/
+The reference/ folder is extremely important.
+Before implementing screens, inspect the reference materials.
+Extract:
+color palette
+typography
+spacing
+border radius
+shadows
+cards
+buttons
+inputs
+tabs
+navigation
+icons
+badges
+status chips
+charts
+lists
+dashboards
+forms
+modals
+empty states
+loading states
+error states
+Create a reusable DonateConnect design system based on those references.
+Suggested reusable components:
+Button Input Card StatusChip ScreenHeader BottomNavigation Avatar Badge Modal EmptyState LoadingState Timeline StatCard
+Do not blindly reproduce screenshots.
+Implement the design natively and adapt it to DonateConnect.
+25. DESIGN ADAPTATION
+If a reference contains a screen that does not directly exist in DonateConnect, extract the design pattern instead.
+Examples:
+Reference dashboard
+→ adapt to Donor/NGO/Admin dashboards.
+Reference cards
+→ adapt to donation/NGO/request cards.
+Reference timeline
+→ use for donation tracking.
+Reference analytics
+→ use for NGO/Admin reports.
+Reference profile
+→ use for donor/volunteer/NGO profiles.
+Reference location UI
+→ use for pickup and NGO discovery.
+Maintain one coherent visual system across all four roles.
+26. RESPONSIVENESS
+Mobile-first.
+Support:
+iOS
+Android
+Expo web where reasonable
+Use:
+safe areas
+accessible touch targets
+keyboard handling
+responsive layouts
+pull-to-refresh
+loading states
+empty states
+error states
+27. API ENDPOINTS
+Implement the following under:
+/api/v1
+Auth
+POST /auth/register POST /auth/register-ngo POST /auth/verify-otp POST /auth/resend-otp POST /auth/login POST /auth/refresh GET /auth/me PATCH /me
+Donor
+GET /donor/summary POST /donations GET /donations/mine GET /donations/:id PATCH /donations/:id/cancel GET /ngos
+NGO
+GET /ngo/donations/available POST /ngo/donations/:id/accept POST /ngo/donations/:id/reject GET /ngo/donations POST /ngo/donations/:id/assign GET /ngo/inventory POST /ngo/inventory PATCH /ngo/inventory/:id GET /ngo/requests POST /ngo/requests PATCH /ngo/requests/:id POST /ngo/requests/:id/match GET /ngo/volunteers POST /ngo/volunteers GET /ngo/team POST /ngo/team PATCH /ngo/team/:id GET /ngo/notes POST /ngo/notes GET /ngo/reports/impact GET /ngo/reports/performance
+Volunteer
+GET /volunteer/tasks GET /volunteer/tasks/:id POST /volunteer/tasks/:id/pickup POST /volunteer/tasks/:id/deliver PATCH /volunteer/availability GET /volunteer/stats
+Shared
+POST /ratings GET /receipts/:donationId GET /notifications PATCH /notifications/:id/read
+Chat:
+GET /chat/threads POST /chat/threads GET /chat/threads/:id/messages POST /chat/threads/:id/messages
+Admin
+GET /admin/stats GET /admin/ngos POST /admin/ngos/:id/approve POST /admin/ngos/:id/reject GET /admin/users PATCH /admin/users/:id GET /admin/donations GET /admin/requests GET /admin/complaints PATCH /admin/complaints/:id GET /admin/reports/platform GET /admin/fraud-flags
+28. AI FEATURES
+Initially implement these as deterministic/explainable services.
+Do not falsely claim they are machine-learning models.
+Route optimization
+Nearest-neighbour + 2-opt using Haversine distance.
+Fraud detection
+Rule-based score using:
+duplicate images
+reused images
+burst submissions
+suspicious location
+reused NGO documents/contact details
+repeated complaints
+Only create fraud flags.
+Never automatically ban users.
+Impact prediction
+Configurable category conversion factors.
+Clearly label results as estimates.
+Donation recommendation
+Rank NGOs based on:
+category match
+distance
+beneficiary requests
+rating
+acceptance rate
+Return reasons for recommendations.
+29. TESTING
+Use the existing testing setup if one already exists.
+Otherwise use:
+Vitest
+Supertest
+Tests must cover:
+donation state machine
+atomic NGO acceptance
+role guards
+ownership guards
+cross-NGO access → 403
+OTP expiration
+OTP attempt limits
+Haversine query
+Also test the Gmail email service without sending real emails during automated tests.
+Mock the SMTP transport.
+Run frontend lint and backend lint/tests before declaring each phase complete.
+30. ENVIRONMENT VARIABLES
+Never commit .env.
+Preserve existing environment variables.
+Update:
+backend/.env.example App/.env.example
+whenever variables are added.
+Backend should include the appropriate variables for:
+PORT= DATABASE_URL= DIRECT_URL= JWT_SECRET= JWT_REFRESH_SECRET= ADMIN_EMAIL= ADMIN_PASSWORD= CLOUDINARY_CLOUD_NAME= CLOUDINARY_API_KEY= CLOUDINARY_API_SECRET= SMTP_HOST=[smtp.gmail.com](http://smtp.gmail.com/) SMTP_PORT=465 SMTP_SECURE=true SMTP_USER= SMTP_PASSWORD= SMTP_FROM= CORS_ORIGIN=
+The user will provide the Gmail SMTP credentials later.
+Do NOT ask the user to put secrets directly into source code.
+Frontend:
+EXPO_PUBLIC_BACKEND_URL=
+For a physical phone, document that:
+localhost
+will not reach the development computer.
+Use the computer's LAN IP.
+31. README
+Update the existing README rather than blindly replacing useful existing documentation.
+Document:
+DonateConnect overview
+architecture
+repository structure
+existing frontend setup
+backend setup
+Neon setup
+Prisma setup
+migrations
+seed
+demo seed
+environment variables
+Gmail SMTP configuration
+OTP setup
+Expo development
+physical-device setup
+deployment
+assumptions
+testing
+Document Gmail App Password setup clearly, but never put the actual credential in the repository.
+32. IMPLEMENTATION PHASES
+Do NOT implement the entire application at once.
+Work in phases.
+PHASE 0 — REPOSITORY + REFERENCES AUDIT
+Before coding:
+inspect repository
+inspect reference/
+inspect existing App
+inspect existing backend
+inspect package.json
+inspect AGENTS.md
+inspect current navigation
+inspect current API setup
+inspect current environment configuration
+confirm Prisma is not currently installed
+identify existing Neon configuration
+Then report findings.
+Do not make unnecessary changes during this phase.
+PHASE 1 — FOUNDATION + PRISMA
+This is the first actual implementation phase.
+Frontend
+Preserve the existing TypeScript Expo setup.
+Only add/fix what is necessary for:
+Expo Router
+role-aware navigation shell
+shared design system
+reference-based UI foundation
+API client
+authentication state foundation
+Do not rebuild existing working components unnecessarily.
+Backend
+Preserve existing TypeScript Express setup.
+Implement:
+Prisma
+Neon adapter
+Prisma schema
+Prisma client
+Prisma configuration
+first migration
+seed
+config validation
+error middleware
+/health
+database connection
+Database
+Verify:
+Application ↓ Prisma ↓ Neon PostgreSQL
+not:
+Application ↓ raw pg Pool
+Gmail
+Prepare the email service architecture.
+Do not require the user to provide credentials during this phase if they are not yet available.
+Create:
+SMTP configuration Email service OTP service integration point
+The actual credentials can be added later through .env.
+Phase 1 acceptance criteria
+Backend:
+starts ↓ Prisma initializes ↓ connects to Neon ↓ migration succeeds ↓ seed succeeds ↓ GET /health ↓ database = connected
+Frontend:
+boots ↓ existing Expo setup remains functional ↓ role-aware shell exists ↓ API client can communicate with backend
+PHASE 2 — AUTHENTICATION + EMAIL OTP
+Implement:
+donor registration
+volunteer registration
+NGO registration
+OTP generation
+OTP hashing
+Gmail SMTP delivery
+OTP verification
+OTP expiration
+OTP attempt limits
+resend OTP
+login
+refresh token
+/auth/me
+role middleware
+NGO document upload
+admin approval
+verification-pending screen
+Acceptance:
+Donor → Register → Receive Gmail OTP → Verify → Login → Donor dashboard
+NGO:
+NGO Register → Upload documents → Pending verification → Admin approves → NGO dashboard
+PHASE 3 — DONATION LIFECYCLE
+Implement:
+donation creation
+image upload
+location
+nearby NGO discovery
+NGO accept/reject
+atomic acceptance
+state machine
+notifications
+donor tracking
+Acceptance:
+Two NGOs attempting to accept simultaneously produce exactly one winner.
+PHASE 4 — VOLUNTEERS + DELIVERY
+Implement:
+NGO volunteer roster
+assignment
+volunteer tasks
+pickup
+delivery
+proof photo
+availability
+inventory
+receipts
+Acceptance:
+PENDING → APPROVED → ASSIGNED → PICKED_UP → DELIVERED
+through the application.
+PHASE 5 — DASHBOARDS + REPORTS
+Implement:
+donor dashboard
+NGO dashboard
+beneficiary requests
+donation matching
+NGO reports
+volunteer statistics
+admin statistics
+user management
+donation monitoring
+complaints
+platform reports
+PHASE 6 — COLLABORATION
+Implement:
+ratings
+rewards
+chat
+internal notes
+NGO team management
+donation analytics
+PHASE 7 — AI FEATURES
+Implement:
+route optimization
+fraud detection
+impact estimation
+donation recommendations
+PHASE 8 — HARDENING
+Perform:
+security review
+authorization review
+API validation review
+database index review
+test coverage review
+UI consistency review
+accessibility review
+performance review
+README update
+33. CRITICAL WORKING RULES
+Preserve existing work
+Do not rewrite functioning code just because you would structure it differently.
+First understand the existing implementation.
+TypeScript stays
+Do NOT convert the project to JavaScript.
+Reference-driven UI
+Do NOT ignore:
+reference/
+Prisma
+Prisma is currently missing and must be properly introduced in Phase 1.
+Neon
+Reuse the existing Neon configuration supplied by the user.
+Secrets
+Never commit:
+database passwords
+JWT secrets
+Gmail credentials
+SMTP passwords
+Cloudinary secrets
+Gmail OTP
+OTP must actually be designed for Gmail SMTP delivery.
+Do not implement a fake OTP flow where the UI simply displays the OTP.
+Backend authorization
+Authorization must be enforced server-side.
+Database
+Do not create fake production data.
+NGO security
+Cross-NGO access must return:
+403
+Donation acceptance
+Two NGOs must never both win the same donation.
+Volunteers
+Do not expose donor's exact address/contact details before assignment.
+NGO verification
+Unapproved NGOs cannot behave as verified NGOs.
+Admin
+No public admin registration.
+AI
+Do not call deterministic algorithms "machine learning".
+34. AFTER EVERY PHASE
+After completing a phase:
+Run the application.
+Run relevant tests.
+Run lint.
+Verify acceptance criteria.
+Report:
+what was implemented
+files changed
+commands run
+what passed
+what remains
+assumptions made
+any blockers
+Then STOP.
+Do not automatically continue to the next phase.
+Wait for further instruction.
+35. DO NOT MAKE THESE MISTAKES
+Do NOT:
+convert TypeScript to JavaScript
+delete the existing App setup
+delete the existing Backend setup
+rebuild Expo unnecessarily
+ignore reference/
+create generic placeholder dashboards
+skip Prisma setup
+skip Prisma migrations
+use raw pg as the primary database layer
+hardcode Neon credentials
+hardcode Gmail credentials
+hardcode JWT secrets
+commit .env
+create fake production data
+put authorization only in the frontend
+allow cross-NGO access
+allow two NGOs to accept the same donation
+expose donor address before volunteer assignment
+allow unverified NGOs to appear as verified
+create admin registration
+automatically ban users based on fraud detection
+claim deterministic algorithms are ML
+manually create iOS/Android native folders
+36. FINAL EXPECTATION
+The final DonateConnect platform should feel like a real production-quality donation management platform, not a generic hackathon prototype.
+It should have:
+polished reference-driven UI
+coherent design system
+TypeScript frontend
+TypeScript backend
+Expo
+Expo Router
+Express
+Prisma
+Neon PostgreSQL
+Gmail SMTP OTP
+authentication
+role-based permissions
+NGO verification
+donation lifecycle
+volunteer workflow
+receipts
+notifications
+reports
+ratings
+chat
+tests
+security
+proper loading states
+proper empty states
+proper error states
+responsive mobile-first UX
+The most important implementation priorities are:
+1. Preserve the existing TypeScript foundation.
+2. Inspect and use reference/ before designing the UI.
+3. Set up Prisma + Neon correctly in the existing backend.
+4. Implement real Gmail SMTP OTP rather than a mock OTP flow.
+5. Build incrementally and verify each phase.
+Start now by auditing the existing repository and reference/ folder.
+Do not immediately start coding.
+First report what already exists, what is missing, what the references contain, and the exact Phase 1 plan.
+Then implement Phase 1 only.
+
+new change: use light theme, shadcn type of style. clean and minial
+new change: do not use cloudinary 

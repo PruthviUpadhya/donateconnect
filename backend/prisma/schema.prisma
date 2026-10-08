@@ -1,0 +1,549 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  DONOR
+  NGO
+  VOLUNTEER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING
+}
+
+enum NgoVerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum NgoTeamRole {
+  OWNER
+  MANAGER
+  STAFF
+}
+
+enum DonationStatus {
+  PENDING
+  APPROVED
+  ASSIGNED
+  PICKED_UP
+  DELIVERED
+  REJECTED
+  CANCELLED
+}
+
+enum AssignmentStatus {
+  ASSIGNED
+  PICKED_UP
+  DELIVERED
+  CANCELLED
+}
+
+enum BeneficiaryRequestStatus {
+  OPEN
+  PARTIALLY_FULFILLED
+  FULFILLED
+  CLOSED
+}
+
+enum RequestUrgency {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum RatingKind {
+  DONOR_TO_NGO
+  NGO_TO_DONOR
+  DONOR_TO_VOLUNTEER
+  NGO_TO_VOLUNTEER
+}
+
+enum ComplaintStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+enum FraudFlagStatus {
+  FLAGGED
+  UNDER_INVESTIGATION
+  RESOLVED
+  FALSE_POSITIVE
+}
+
+model User {
+  id              String      @id @default(uuid())
+  role            Role        @default(DONOR)
+  name            String
+  email           String      @unique
+  passwordHash    String
+  phone           String?
+  address         String?
+  latitude        Float?
+  longitude       Float?
+  emailVerifiedAt DateTime?
+  status          UserStatus  @default(ACTIVE)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  otpCodes         OtpCode[]
+  ownedNgo         Ngo?               @relation("NgoOwner")
+  ngoMemberships   NgoMember[]
+  volunteerProfile VolunteerProfile?
+  donations        Donation[]         @relation("DonorDonations")
+  assignedTasks    Assignment[]       @relation("AssignedBy")
+  givenRatings     Rating[]           @relation("RatingsGiven")
+  receivedRatings  Rating[]           @relation("RatingsReceived")
+  chatMessages     ChatMessage[]
+  internalNotes    InternalNote[]
+  complaintsRaised Complaint[]        @relation("ComplaintsRaised")
+  complaintsAgainst Complaint[]       @relation("ComplaintsAgainst")
+  handledComplaints Complaint[]       @relation("ComplaintsHandled")
+  notifications    Notification[]
+  rewardEvents     RewardEvent[]
+  auditLogs        AuditLog[]         @relation("ActorAuditLogs")
+  fraudFlags       FraudFlag[]        @relation("SubjectFraudFlags")
+
+  @@index([role])
+  @@index([status])
+  @@index([email])
+}
+
+model OtpCode {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose    String
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId, purpose])
+  @@index([expiresAt])
+}
+
+model Ngo {
+  id                         String                @id @default(uuid())
+  ownerId                    String                @unique
+  owner                      User                  @relation("NgoOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  name                       String
+  registrationCertificateUrl String?
+  panCardUrl                 String?
+  officialEmail              String                @unique
+  contactNumber              String
+  addressProofUrl            String?
+  address                    String
+  latitude                   Float?
+  longitude                  Float?
+  websiteUrl                 String?
+  socialLinks                String?
+  verificationStatus         NgoVerificationStatus @default(PENDING)
+  verifiedById               String?
+  verifiedAt                 DateTime?
+  rejectionReason            String?
+  createdAt                  DateTime              @default(now())
+  updatedAt                  DateTime              @updatedAt
+
+  members             NgoMember[]
+  volunteers          NgoVolunteer[]
+  inventory           InventoryItem[]
+  beneficiaryRequests BeneficiaryRequest[]
+  internalNotes       InternalNote[]
+  donationsAccepted   Donation[]             @relation("NgoAcceptedDonations")
+  donationResponses   DonationNgoResponse[]
+  assignments         Assignment[]
+  ratingsReceived     Rating[]               @relation("NgoRatingsReceived")
+  complaintsAgainst   Complaint[]            @relation("NgoComplaintsAgainst")
+
+  @@index([verificationStatus])
+  @@index([latitude, longitude])
+  @@index([officialEmail])
+}
+
+model NgoMember {
+  id        String      @id @default(uuid())
+  ngoId     String
+  ngo       Ngo         @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamRole  NgoTeamRole @default(STAFF)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@unique([ngoId, userId])
+  @@index([ngoId])
+  @@index([userId])
+}
+
+model VolunteerProfile {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  availability    Boolean  @default(true)
+  vehicleType     String?
+  ratingAvg       Float    @default(0.0)
+  ratingCount     Int      @default(0)
+  tasksCompleted  Int      @default(0)
+  rewardPoints    Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  ngoAffiliations NgoVolunteer[]
+  assignments     Assignment[]
+
+  @@index([availability])
+  @@index([ratingAvg])
+}
+
+model NgoVolunteer {
+  id          String           @id @default(uuid())
+  ngoId       String
+  ngo         Ngo              @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  volunteerId String
+  volunteer   VolunteerProfile @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+  status      String           @default("ACTIVE")
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([ngoId, volunteerId])
+  @@index([ngoId])
+  @@index([volunteerId])
+}
+
+model DonationCategory {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  icon        String?
+  createdAt   DateTime @default(now())
+
+  donations           Donation[]
+  inventoryItems      InventoryItem[]
+  beneficiaryRequests BeneficiaryRequest[]
+}
+
+model Donation {
+  id                  String         @id @default(uuid())
+  donorId             String
+  donor               User           @relation("DonorDonations", fields: [donorId], references: [id], onDelete: Restrict)
+  categoryId          String
+  category            DonationCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  description         String?
+  quantity            Float
+  unit                String
+  pickupAddress       String
+  pickupLatitude      Float?
+  pickupLongitude     Float?
+  status              DonationStatus @default(PENDING)
+  acceptedByNgoId     String?
+  acceptedByNgo       Ngo?           @relation("NgoAcceptedDonations", fields: [acceptedByNgoId], references: [id], onDelete: SetNull)
+  approvedAt          DateTime?
+  assignedAt          DateTime?
+  pickedUpAt          DateTime?
+  deliveredAt         DateTime?
+  rejectedAt          DateTime?
+  cancelledAt         DateTime?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  images              DonationImage[]
+  ngoResponses        DonationNgoResponse[]
+  assignments         Assignment[]
+  inventoryItems      InventoryItem[]
+  matches             DonationMatch[]
+  ratings             Rating[]
+  receipt             Receipt?
+  chatThreads         ChatThread[]
+  internalNotes       InternalNote[]
+  complaints          Complaint[]
+
+  @@index([donorId])
+  @@index([acceptedByNgoId])
+  @@index([status])
+  @@index([status, createdAt])
+  @@index([pickupLatitude, pickupLongitude])
+}
+
+model StoredFile {
+  id        String   @id @default(uuid())
+  filename  String
+  mimeType  String
+  data      String   // Base64-encoded compressed image / document data
+  size      Int
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model DonationImage {
+  id         String   @id @default(uuid())
+  donationId String
+  donation   Donation @relation(fields: [donationId], references: [id], onDelete: Cascade)
+  url        String   // Can store /api/v1/files/:id or data:image URL
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@index([donationId])
+}
+
+model DonationNgoResponse {
+  id         String   @id @default(uuid())
+  donationId String
+  donation   Donation @relation(fields: [donationId], references: [id], onDelete: Cascade)
+  ngoId      String
+  ngo        Ngo      @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  response   String   // ACCEPTED, REJECTED
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  @@unique([donationId, ngoId])
+  @@index([donationId])
+  @@index([ngoId])
+}
+
+model Assignment {
+  id                 String           @id @default(uuid())
+  donationId         String
+  donation           Donation         @relation(fields: [donationId], references: [id], onDelete: Cascade)
+  ngoId              String
+  ngo                Ngo              @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  volunteerId        String
+  volunteer          VolunteerProfile @relation(fields: [volunteerId], references: [id], onDelete: Restrict)
+  assignedById       String
+  assignedBy         User             @relation("AssignedBy", fields: [assignedById], references: [id], onDelete: Restrict)
+  status             AssignmentStatus @default(ASSIGNED)
+  pickupConfirmedAt  DateTime?
+  deliveredAt        DateTime?
+  proofPhotoUrl      String?
+  notes              String?
+  deliveryAddressSnap String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([donationId])
+  @@index([ngoId])
+  @@index([volunteerId])
+  @@index([status])
+}
+
+model InventoryItem {
+  id         String           @id @default(uuid())
+  ngoId      String
+  ngo        Ngo              @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  donationId String?
+  donation   Donation?        @relation(fields: [donationId], references: [id], onDelete: SetNull)
+  categoryId String
+  category   DonationCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  name       String
+  quantity   Float
+  unit       String
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  matches    DonationMatch[]
+
+  @@index([ngoId])
+  @@index([categoryId])
+}
+
+model BeneficiaryRequest {
+  id                String                   @id @default(uuid())
+  ngoId             String
+  ngo               Ngo                      @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  title             String
+  categoryId        String
+  category          DonationCategory         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  quantityNeeded    Float
+  quantityFulfilled Float                    @default(0.0)
+  urgency           RequestUrgency           @default(MEDIUM)
+  status            BeneficiaryRequestStatus @default(OPEN)
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  matches           DonationMatch[]
+
+  @@index([ngoId])
+  @@index([status])
+  @@index([urgency])
+}
+
+model DonationMatch {
+  id                   String              @id @default(uuid())
+  inventoryItemId      String?
+  inventoryItem        InventoryItem?      @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+  donationId           String?
+  donation             Donation?           @relation(fields: [donationId], references: [id], onDelete: SetNull)
+  beneficiaryRequestId String
+  beneficiaryRequest   BeneficiaryRequest  @relation(fields: [beneficiaryRequestId], references: [id], onDelete: Cascade)
+  quantity             Float
+  createdAt            DateTime            @default(now())
+
+  @@index([beneficiaryRequestId])
+  @@index([donationId])
+  @@index([inventoryItemId])
+}
+
+model Rating {
+  id          String     @id @default(uuid())
+  kind        RatingKind
+  fromUserId  String
+  fromUser    User       @relation("RatingsGiven", fields: [fromUserId], references: [id], onDelete: Restrict)
+  targetUserId String?
+  targetUser  User?      @relation("RatingsReceived", fields: [targetUserId], references: [id], onDelete: SetNull)
+  targetNgoId String?
+  targetNgo   Ngo?       @relation("NgoRatingsReceived", fields: [targetNgoId], references: [id], onDelete: SetNull)
+  donationId  String
+  donation    Donation   @relation(fields: [donationId], references: [id], onDelete: Cascade)
+  score       Int        // 1 to 5
+  comment     String?
+  createdAt   DateTime   @default(now())
+
+  @@unique([donationId, kind, fromUserId])
+  @@index([targetUserId])
+  @@index([targetNgoId])
+  @@index([donationId])
+}
+
+model Receipt {
+  id            String   @id @default(uuid())
+  donationId    String   @unique
+  donation      Donation @relation(fields: [donationId], references: [id], onDelete: Cascade)
+  receiptNumber String   @unique
+  issuedAt      DateTime @default(now())
+  impactSummary String?
+  createdAt     DateTime @default(now())
+
+  @@index([receiptNumber])
+}
+
+model ChatThread {
+  id         String        @id @default(uuid())
+  donationId String
+  donation   Donation      @relation(fields: [donationId], references: [id], onDelete: Cascade)
+  createdAt  DateTime      @default(now())
+
+  messages   ChatMessage[]
+
+  @@index([donationId])
+}
+
+model ChatMessage {
+  id        String     @id @default(uuid())
+  threadId  String
+  thread    ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User       @relation(fields: [senderId], references: [id], onDelete: Restrict)
+  body      String
+  readAt    DateTime?
+  createdAt DateTime   @default(now())
+
+  @@index([threadId])
+  @@index([senderId])
+}
+
+model InternalNote {
+  id         String    @id @default(uuid())
+  ngoId      String
+  ngo        Ngo       @relation(fields: [ngoId], references: [id], onDelete: Cascade)
+  donationId String?
+  donation   Donation? @relation(fields: [donationId], references: [id], onDelete: SetNull)
+  authorId   String
+  author     User      @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  body       String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([ngoId])
+  @@index([donationId])
+}
+
+model Complaint {
+  id             String          @id @default(uuid())
+  raisedById     String
+  raisedBy       User            @relation("ComplaintsRaised", fields: [raisedById], references: [id], onDelete: Restrict)
+  targetUserId   String?
+  targetUser     User?           @relation("ComplaintsAgainst", fields: [targetUserId], references: [id], onDelete: SetNull)
+  targetNgoId    String?
+  targetNgo      Ngo?            @relation("NgoComplaintsAgainst", fields: [targetNgoId], references: [id], onDelete: SetNull)
+  donationId     String?
+  donation       Donation?       @relation(fields: [donationId], references: [id], onDelete: SetNull)
+  subject        String
+  description    String
+  status         ComplaintStatus @default(OPEN)
+  resolution     String?
+  handledById    String?
+  handledBy      User?           @relation("ComplaintsHandled", fields: [handledById], references: [id], onDelete: SetNull)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([raisedById])
+  @@index([status])
+}
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String
+  data      String?   // JSON payload string
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt])
+}
+
+model RewardEvent {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  points    Int
+  reason    String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model FraudFlag {
+  id        String          @id @default(uuid())
+  subjectId String
+  subject   User            @relation("SubjectFraudFlags", fields: [subjectId], references: [id], onDelete: Cascade)
+  ruleCode  String
+  score     Float
+  details   String?
+  status    FraudFlagStatus @default(FLAGGED)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@index([subjectId])
+  @@index([status])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  actor      User?    @relation("ActorAuditLogs", fields: [actorId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String
+  entityId   String
+  meta       String?  // JSON string
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([entityType, entityId])
+}
