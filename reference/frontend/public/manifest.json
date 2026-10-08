@@ -1,0 +1,18 @@
+{
+  "short_name": "DonateConnect",
+  "name": "DonateConnect - NGO Donation & Delivery Platform",
+  "description": "Transparent NGO donation management platform with live GPS driver tracking, AI smart matching, and 80G tax receipts.",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#020617",
+  "theme_color": "#4f46e5",
+  "display": "standalone",
+  "orientation": "portrait"
+}

@@ -16,10 +16,6 @@ $RECYCLE.BIN/
 *.env
 *.local
 
-# Reference folder (local references only)
-/reference/
-reference/
-
 # Node / Dependencies
 node_modules/
 npm-debug.log*
