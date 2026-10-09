@@ -61,7 +61,11 @@ export default function LoginScreen() {
         // Unverified user -> redirect immediately to OTP verification page
         router.push({
           pathname: "/(auth)/verify-otp",
-          params: { email, purpose: "EMAIL_VERIFICATION" },
+          params: {
+            email,
+            purpose: "EMAIL_VERIFICATION",
+            ...(err?.details?.devOtp ? { otp: err.details.devOtp } : {}),
+          },
         });
         return;
       }

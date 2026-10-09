@@ -101,8 +101,12 @@ export const register = async (req: Request, res: Response, next: NextFunction):
           });
         }
 
+        let devOtp: string | undefined;
         try {
-          await otpService.createAndSendOtp(updatedUser.id, updatedUser.email, "EMAIL_VERIFICATION");
+          const otpResult = await otpService.createAndSendOtp(updatedUser.id, updatedUser.email, "EMAIL_VERIFICATION");
+          if (process.env.NODE_ENV !== "production" || process.env.DEV_RETURN_OTP === "true") {
+            devOtp = otpResult.otp;
+          }
         } catch (otpErr: any) {
           if (otpErr?.code !== "OTP_RATE_LIMITED") {
             throw otpErr;
@@ -112,7 +116,7 @@ export const register = async (req: Request, res: Response, next: NextFunction):
         res.status(200).json({
           success: true,
           message: "Account already exists but is unverified. Verification code is active, please verify your email.",
-          data: { user: updatedUser },
+          data: { user: updatedUser, devOtp },
         });
         return;
       }
@@ -153,12 +157,15 @@ export const register = async (req: Request, res: Response, next: NextFunction):
     }
 
     // Trigger OTP sending
-    await otpService.createAndSendOtp(user.id, user.email, "EMAIL_VERIFICATION");
+    const otpResult = await otpService.createAndSendOtp(user.id, user.email, "EMAIL_VERIFICATION");
 
     res.status(201).json({
       success: true,
       message: "Registration successful. Verification code has been sent to your email.",
-      data: { user },
+      data: {
+        user,
+        devOtp: process.env.NODE_ENV !== "production" || process.env.DEV_RETURN_OTP === "true" ? otpResult.otp : undefined,
+      },
     });
   } catch (err) {
     next(err);
@@ -414,9 +421,13 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
     }
 
     if (user.status === UserStatus.PENDING && !user.emailVerifiedAt) {
+      let devOtp: string | undefined;
       // Auto-resend OTP so the unverified user has the newest valid code ready in their inbox
       try {
-        await otpService.createAndSendOtp(user.id, user.email, "EMAIL_VERIFICATION");
+        const otpResult = await otpService.createAndSendOtp(user.id, user.email, "EMAIL_VERIFICATION");
+        if (process.env.NODE_ENV !== "production" || process.env.DEV_RETURN_OTP === "true") {
+          devOtp = otpResult.otp;
+        }
       } catch (otpErr) {
         console.error("Auto-resend OTP error during unverified login:", otpErr);
       }
@@ -425,7 +436,7 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
         statusCode: 403,
         code: "EMAIL_NOT_VERIFIED",
         message: "Please verify your email address. A fresh verification code has been dispatched to your email.",
-        details: { email: user.email, unverified: true },
+        details: { email: user.email, unverified: true, devOtp },
       });
     }
 

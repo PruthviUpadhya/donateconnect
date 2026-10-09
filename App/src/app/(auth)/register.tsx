@@ -28,7 +28,7 @@ export default function RegisterScreen() {
       setLoading(true);
       setError(null);
 
-      await api.request("/auth/register", {
+      const res: any = await api.request("/auth/register", {
         method: "POST",
         body: JSON.stringify({
           name,
@@ -43,7 +43,11 @@ export default function RegisterScreen() {
       // Redirect to OTP verification screen with email prefilled
       router.push({
         pathname: "/(auth)/verify-otp",
-        params: { email, purpose: "EMAIL_VERIFICATION" },
+        params: {
+          email,
+          purpose: "EMAIL_VERIFICATION",
+          ...(res?.data?.devOtp ? { otp: res.data.devOtp } : {}),
+        },
       });
     } catch (err: any) {
       setError(err.message || "Registration failed");

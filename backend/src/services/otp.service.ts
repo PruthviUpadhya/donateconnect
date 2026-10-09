@@ -21,7 +21,7 @@ export class OtpService {
    * Generates, hashes, stores, and emails an OTP.
    * Rate limits resends within 60 seconds.
    */
-  async createAndSendOtp(userId: string, email: string, purpose: string): Promise<{ success: boolean; deliveredVia: "smtp" | "console" }> {
+  async createAndSendOtp(userId: string, email: string, purpose: string): Promise<{ success: boolean; deliveredVia: "smtp" | "console"; otp: string }> {
     // Check resend rate limit (last OTP created within 60 seconds)
     const latestOtp = await prisma.otpCode.findFirst({
       where: { userId, purpose, consumedAt: null },
@@ -65,7 +65,7 @@ export class OtpService {
         console.error("⚠️ Background email dispatch error:", err?.message || err);
       });
 
-    return { success: true, deliveredVia: "smtp" };
+    return { success: true, deliveredVia: "smtp", otp: rawOtp };
   }
 
   /**
