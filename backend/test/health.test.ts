@@ -31,6 +31,6 @@ describe("Phase 1 Acceptance Tests", () => {
       expiresInMinutes: 10,
     });
     expect(result.success).toBe(true);
-    expect(["resend", "smtp", "console"]).toContain(result.deliveredVia);
+    expect(["brevo", "smtp", "console"]).toContain(result.deliveredVia);
   });
 });

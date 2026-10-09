@@ -11,7 +11,7 @@ export class EmailService {
     to,
     otp,
     expiresInMinutes = 10,
-  }: SendOtpEmailParams): Promise<{ success: boolean; deliveredVia: "resend" | "console" | "smtp" }> {
+  }: SendOtpEmailParams): Promise<{ success: boolean; deliveredVia: "brevo" | "console" | "smtp" }> {
     // Always log OTP to server console as an immediate, foolproof fallback
     console.log("-------------------------------------------------------");
     console.log(`📨 [OTP CODE] Recipient: ${to}`);
@@ -20,13 +20,7 @@ export class EmailService {
 
     // Automated test mode: Mock transport immediately
     if (config.nodeEnv === "test") {
-      return { success: true, deliveredVia: "resend" };
-    }
-
-    const apiKey = config.resendApiKey;
-    if (!apiKey) {
-      console.warn("⚠️ [RESEND] No RESENDER_API_KEY configured. OTP logged to console only.");
-      return { success: true, deliveredVia: "console" };
+      return { success: true, deliveredVia: "brevo" };
     }
 
     const htmlContent = `
@@ -49,34 +43,43 @@ export class EmailService {
       </div>
     `;
 
-    try {
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: config.resendFrom,
-          to: [to],
-          subject: `Your DonateConnect Verification Code: ${otp}`,
-          html: htmlContent,
-        }),
-      });
+    // Try Brevo HTTPS REST API (Works seamlessly on Render Free Tier, sends to any recipient)
+    if (config.brevoApiKey) {
+      try {
+        const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+          method: "POST",
+          headers: {
+            "accept": "application/json",
+            "api-key": config.brevoApiKey,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            sender: {
+              name: config.brevoSenderName,
+              email: config.brevoSenderEmail,
+            },
+            to: [{ email: to }],
+            subject: `Your DonateConnect Verification Code: ${otp}`,
+            htmlContent,
+          }),
+        });
 
-      if (response.ok) {
-        const data = await response.json().catch(() => ({}));
-        console.log(`✅ [RESEND] Email successfully sent to ${to}:`, data);
-        return { success: true, deliveredVia: "resend" };
-      } else {
-        const errorText = await response.text();
-        console.error(`⚠️ [RESEND ERROR] Status ${response.status}:`, errorText);
-        return { success: true, deliveredVia: "console" };
+        if (response.ok) {
+          const data = await response.json().catch(() => ({}));
+          console.log(`✅ [BREVO] Email successfully sent to ${to}:`, data);
+          return { success: true, deliveredVia: "brevo" };
+        } else {
+          const errorText = await response.text();
+          console.error(`⚠️ [BREVO ERROR] Status ${response.status}:`, errorText);
+        }
+      } catch (err: any) {
+        console.error("⚠️ [BREVO EXCEPTION]:", err?.message || err);
       }
-    } catch (err: any) {
-      console.error("⚠️ [RESEND EXCEPTION]:", err?.message || err);
-      return { success: true, deliveredVia: "console" };
+    } else {
+      console.warn("⚠️ [EMAIL SERVICE] No BREVO_API_KEY configured. OTP logged to console only.");
     }
+
+    return { success: true, deliveredVia: "console" };
   }
 }
 

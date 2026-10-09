@@ -12,9 +12,9 @@ const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().default("donateconnect-dev-refresh-secret-key-change-in-prod!"),
   ADMIN_EMAIL: z.string().email().optional(),
   ADMIN_PASSWORD: z.string().optional(),
-  RESENDER_API_KEY: z.string().optional(),
-  RESEND_API_KEY: z.string().optional(),
-  RESEND_FROM: z.string().optional(),
+  BREVO_API_KEY: z.string().optional(),
+  BREVO_SENDER_EMAIL: z.string().email().optional(),
+  BREVO_SENDER_NAME: z.string().default("DonateConnect"),
   CORS_ORIGIN: z.string().default("*"),
 });
 
@@ -35,8 +35,9 @@ export const config = {
   jwtRefreshSecret: env.JWT_REFRESH_SECRET,
   adminEmail: env.ADMIN_EMAIL,
   adminPassword: env.ADMIN_PASSWORD,
-  resendApiKey: env.RESENDER_API_KEY || env.RESEND_API_KEY || process.env.RESENDER_API_KEY || process.env.RESEND_API_KEY,
-  resendFrom: env.RESEND_FROM || process.env.RESEND_FROM || "DonateConnect <onboarding@resend.dev>",
+  brevoApiKey: env.BREVO_API_KEY || process.env.BREVO_API_KEY,
+  brevoSenderEmail: env.BREVO_SENDER_EMAIL || process.env.BREVO_SENDER_EMAIL || "pruthviupadhya31@gmail.com",
+  brevoSenderName: env.BREVO_SENDER_NAME || process.env.BREVO_SENDER_NAME || "DonateConnect",
   corsOrigin: env.CORS_ORIGIN,
 };
 
