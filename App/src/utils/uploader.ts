@@ -20,48 +20,77 @@ export async function uploadFile(
   fileName: string = "document",
   mimeType: string = "application/pdf"
 ): Promise<UploadResult> {
-  const formData = new FormData();
+  const uploadUrl = `${API_URL}/api/v1/uploads`;
+  const cleanName = fileName || `file_${Date.now()}.jpg`;
+  const cleanType = mimeType || "image/jpeg";
 
+  // On Web: standard fetch works fine
   if (Platform.OS === "web") {
-    // Web: fetch blob then append with filename
+    const formData = new FormData();
     const response = await fetch(uri);
     const blob = await response.blob();
-    formData.append("file", blob, fileName);
-  } else {
-    // Native (iOS/Android): standard React Native FormData file object
+    formData.append("file", blob, cleanName);
+
+    const res = await fetch(uploadUrl, {
+      method: "POST",
+      body: formData,
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json?.error?.message || `Upload failed with status ${res.status}`);
+    }
+    return {
+      id: json.data.id,
+      url: json.data.url,
+      filename: json.data.filename || cleanName,
+      size: json.data.size,
+    };
+  }
+
+  // On Native (Android / iOS):
+  // Expo's patched `fetch` uses `convertFormDataAsync` which crashes with
+  // "Unsupported FormDataPart implementation" on React Native's file parts { uri, name, type }.
+  // Using native XMLHttpRequest completely bypasses Expo's fetch patch and sends
+  // the file part directly to OkHttp on Android!
+  return new Promise<UploadResult>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", uploadUrl);
+
+    xhr.onload = () => {
+      try {
+        const json = JSON.parse(xhr.responseText);
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve({
+            id: json.data.id,
+            url: json.data.url,
+            filename: json.data.filename || cleanName,
+            size: json.data.size,
+          });
+        } else {
+          reject(new Error(json?.error?.message || `Upload failed with status ${xhr.status}`));
+        }
+      } catch (e: any) {
+        reject(new Error(`Failed to parse response: ${xhr.responseText.slice(0, 100)}`));
+      }
+    };
+
+    xhr.onerror = () => {
+      reject(new Error("Network error during file upload"));
+    };
+
+    xhr.ontimeout = () => {
+      reject(new Error("File upload timed out"));
+    };
+
+    const formData = new FormData();
     formData.append("file", {
       uri: uri,
-      name: fileName || "document.pdf",
-      type: mimeType || "application/pdf",
+      name: cleanName,
+      type: cleanType,
     } as any);
-  }
 
-  const res = await fetch(`${API_URL}/api/v1/uploads`, {
-    method: "POST",
-    headers: {
-      // Do NOT set Content-Type header manually for multipart/form-data
-    },
-    body: formData,
+    xhr.send(formData);
   });
-
-  const text = await res.text();
-  let json: any;
-  try {
-    json = JSON.parse(text);
-  } catch {
-    throw new Error(`Upload server responded with non-JSON: ${text.slice(0, 100)}`);
-  }
-
-  if (!res.ok) {
-    throw new Error(json?.error?.message || `Upload failed with status ${res.status}`);
-  }
-
-  return {
-    id: json.data.id,
-    url: json.data.url,
-    filename: json.data.filename || fileName,
-    size: json.data.size,
-  };
 }
 
 // Backward compatibility alias
@@ -71,14 +100,27 @@ export const uploadToCloudinary = uploadFile;
  * Pick image from device camera roll
  */
 export async function pickImage(): Promise<ImagePicker.ImagePickerAsset | null> {
-  const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ImagePicker.MediaTypeOptions.Images,
-    quality: 0.8,
-    allowsEditing: true,
-  });
+  try {
+    // Request permission first (vital for Android 13+ / 14 photo selector and permissions)
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissionResult.granted) {
+      alert("Permission to access gallery is required to choose photos.");
+      return null;
+    }
 
-  if (!result.canceled && result.assets && result.assets.length > 0) {
-    return result.assets[0];
+    // Modern expo-image-picker (Expo 52/57) supports mediaTypes: ['images']
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.8,
+      allowsEditing: false, // avoids Android native crop intent failure/crashes
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      return result.assets[0];
+    }
+  } catch (err: any) {
+    console.error("[pickImage error]:", err);
+    alert(err?.message || "Could not open image picker");
   }
   return null;
 }

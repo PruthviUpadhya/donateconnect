@@ -25,12 +25,16 @@ export const registerNgoSchema = z.object({
   officialEmail: z.string().email("Invalid official email address"),
   contactNumber: z.string().min(7, "Contact number is required"),
   address: z.string().min(5, "Physical NGO address is required"),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
-  websiteUrl: z.string().url().optional().or(z.literal("")),
+  latitude: z.number().optional().nullable(),
+  longitude: z.number().optional().nullable(),
+  websiteUrl: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((val) => (val && val.trim() !== "" ? val.trim() : undefined)),
   registrationCertificateUrl: z.string().min(1, "Registration certificate is required"),
   panCardUrl: z.string().min(1, "PAN card document is required"),
-  addressProofUrl: z.string().optional(),
+  addressProofUrl: z.string().optional().nullable(),
 });
 
 export const verifyOtpSchema = z.object({

@@ -106,6 +106,16 @@ export default function CreateDonationScreen() {
       const asset = await pickImage();
       if (!asset) return;
 
+      // Add to local preview immediately so donor can see the photo right away
+      const tempId = `local_${Date.now()}`;
+      setPhotos((prev) => [
+        ...prev,
+        {
+          localUri: asset.uri,
+          serverUrl: "", // will be updated upon upload
+        },
+      ]);
+
       setUploadingImage(true);
       setError(null);
 
@@ -116,19 +126,20 @@ export default function CreateDonationScreen() {
         asset.mimeType || "image/jpeg"
       );
 
-      // Save both local URI (guaranteed to render immediately on device) and server URL
-      setPhotos((prev) => [
-        ...prev,
-        {
-          localUri: asset.uri,
-          serverUrl: res.url,
-        },
-      ]);
+      // Update the serverUrl once uploaded
+      setPhotos((prev) =>
+        prev.map((p) => (p.localUri === asset.uri ? { ...p, serverUrl: res.url } : p))
+      );
     } catch (err: any) {
+      console.error("[handlePickPhoto error]:", err);
       setError(err.message || "Failed to upload photo");
     } finally {
       setUploadingImage(false);
     }
+  };
+
+  const handleRemovePhoto = (indexToRemove: number) => {
+    setPhotos((prev) => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
   const handleCreate = async () => {
@@ -146,18 +157,22 @@ export default function CreateDonationScreen() {
       setLoading(true);
       setError(null);
 
-      // Check if selectedCategoryId is a valid UUID or find it from DB
+      // Ensure finalCategoryId is a valid UUID
       let finalCategoryId = selectedCategoryId;
-      const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(finalCategoryId);
+      const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
-      if (!isUuid) {
-        // Find category from backend
+      if (!uuidRegex.test(finalCategoryId)) {
+        // Query backend to get real UUIDs (auto-provisioned by backend)
         const catRes = await api.request<{ success: boolean; data: { categories: any[] } }>("/categories");
-        const found = catRes.data?.categories?.find((c) => c.id === selectedCategoryId || c.name === selectedCategoryId);
-        if (found) {
+        const categoriesList = catRes.data?.categories || [];
+        const found = categoriesList.find((c) => c.id === selectedCategoryId || c.name.toLowerCase() === selectedCategoryId.toLowerCase());
+
+        if (found && uuidRegex.test(found.id)) {
           finalCategoryId = found.id;
-        } else if (catRes.data?.categories?.length > 0) {
-          finalCategoryId = catRes.data.categories[0].id;
+        } else if (categoriesList.length > 0 && uuidRegex.test(categoriesList[0].id)) {
+          finalCategoryId = categoriesList[0].id;
+        } else {
+          throw new Error("Unable to resolve donation category ID. Please reload the screen.");
         }
       }
 
@@ -301,24 +316,33 @@ export default function CreateDonationScreen() {
           <View style={styles.photoContainer}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoList}>
               {photos.map((item, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  activeOpacity={0.8}
-                  onPress={() => {
-                    setViewerIndex(idx);
-                    setViewerVisible(true);
-                  }}
-                  style={styles.previewImageWrapper}
-                >
-                  <Image
-                    source={{ uri: item.localUri || item.serverUrl }}
-                    style={styles.previewImage}
-                    resizeMode="cover"
-                  />
-                  <View style={styles.zoomBadge}>
-                    <Text style={styles.zoomBadgeText}>🔍 View</Text>
-                  </View>
-                </TouchableOpacity>
+                <View key={idx} style={styles.previewImageWrapper}>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      setViewerIndex(idx);
+                      setViewerVisible(true);
+                    }}
+                  >
+                    <Image
+                      source={{ uri: item.localUri || item.serverUrl }}
+                      style={styles.previewImage}
+                      resizeMode="cover"
+                    />
+                    <View style={styles.zoomBadge}>
+                      <Text style={styles.zoomBadgeText}>🔍 View</Text>
+                    </View>
+                  </TouchableOpacity>
+                  
+                  {/* Delete photo thumbnail button */}
+                  <TouchableOpacity
+                    style={styles.removePhotoBtn}
+                    onPress={() => handleRemovePhoto(idx)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={styles.removePhotoBtnText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
               ))}
 
               <TouchableOpacity
@@ -448,6 +472,29 @@ const styles = StyleSheet.create({
   },
   previewImageWrapper: {
     position: "relative",
+  },
+  removePhotoBtn: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    backgroundColor: "#e11d48",
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.25,
+    shadowRadius: 2,
+  },
+  removePhotoBtnText: {
+    color: "#ffffff",
+    fontSize: 11,
+    fontWeight: "700",
+    lineHeight: 13,
   },
   previewImage: {
     width: 76,

@@ -8,6 +8,7 @@ import { Button } from "../../components/Button";
 import { Colors, Spacing, Typography } from "../../theme/colors";
 import { api } from "../../api/client";
 import { pickDocument, uploadFile } from "../../utils/uploader";
+import { ImageViewerModal } from "../../components/ImageViewerModal";
 
 export default function RegisterNgoScreen() {
   const [ownerName, setOwnerName] = useState("");
@@ -27,6 +28,11 @@ export default function RegisterNgoScreen() {
   const [panUrl, setPanUrl] = useState<string>("");
   const [panName, setPanName] = useState<string>("");
   const [uploadingPan, setUploadingPan] = useState(false);
+
+  // In-app preview modal state (previews in same tab/app on all devices)
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewImages, setPreviewImages] = useState<string[]>([]);
+  const [previewTitle, setPreviewTitle] = useState<string>("");
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -93,17 +99,25 @@ export default function RegisterNgoScreen() {
       setLoading(true);
       setError(null);
 
+      const trimmedWebsite = websiteUrl.trim();
+      let formattedWebsite: string | undefined = undefined;
+      if (trimmedWebsite) {
+        formattedWebsite = trimmedWebsite.startsWith("http://") || trimmedWebsite.startsWith("https://")
+          ? trimmedWebsite
+          : `https://${trimmedWebsite}`;
+      }
+
       await api.request("/auth/register-ngo", {
         method: "POST",
         body: JSON.stringify({
-          ownerName,
-          email,
+          ownerName: ownerName.trim(),
+          email: email.trim().toLowerCase(),
           password,
-          ngoName,
-          officialEmail,
-          contactNumber,
-          address,
-          websiteUrl: websiteUrl || undefined,
+          ngoName: ngoName.trim(),
+          officialEmail: officialEmail.trim().toLowerCase(),
+          contactNumber: contactNumber.trim(),
+          address: address.trim(),
+          websiteUrl: formattedWebsite,
           registrationCertificateUrl: certUrl,
           panCardUrl: panUrl,
         }),
@@ -111,7 +125,7 @@ export default function RegisterNgoScreen() {
 
       router.push({
         pathname: "/(auth)/verify-otp",
-        params: { email, purpose: "EMAIL_VERIFICATION" },
+        params: { email: email.trim().toLowerCase(), purpose: "EMAIL_VERIFICATION" },
       });
     } catch (err: any) {
       setError(err.message || "Failed to register NGO");
@@ -230,7 +244,13 @@ export default function RegisterNgoScreen() {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.uploadedSuccessTitle}>Successfully Stored</Text>
                     <Text style={styles.uploadedFilename} numberOfLines={1}>{certName}</Text>
-                    <TouchableOpacity onPress={() => Linking.openURL(certUrl)}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setPreviewImages([certUrl]);
+                        setPreviewTitle(`Registration Certificate - ${certName}`);
+                        setPreviewVisible(true);
+                      }}
+                    >
                       <Text style={styles.previewLinkText}>View uploaded document ↗</Text>
                     </TouchableOpacity>
                   </View>
@@ -277,7 +297,13 @@ export default function RegisterNgoScreen() {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.uploadedSuccessTitle}>Successfully Stored</Text>
                     <Text style={styles.uploadedFilename} numberOfLines={1}>{panName}</Text>
-                    <TouchableOpacity onPress={() => Linking.openURL(panUrl)}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setPreviewImages([panUrl]);
+                        setPreviewTitle(`PAN Card - ${panName}`);
+                        setPreviewVisible(true);
+                      }}
+                    >
                       <Text style={styles.previewLinkText}>View uploaded document ↗</Text>
                     </TouchableOpacity>
                   </View>
@@ -309,6 +335,15 @@ export default function RegisterNgoScreen() {
         <TouchableOpacity onPress={() => router.replace("/(auth)/login")} style={styles.backLink}>
           <Text style={styles.backText}>Already have an account? Sign in</Text>
         </TouchableOpacity>
+
+        {/* In-app Document Preview Modal (renders on same tab across Android, iOS, and Web) */}
+        <ImageViewerModal
+          visible={previewVisible}
+          images={previewImages}
+          initialIndex={0}
+          onClose={() => setPreviewVisible(false)}
+          title={previewTitle}
+        />
       </ScrollView>
     </SafeAreaView>
   );

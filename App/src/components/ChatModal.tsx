@@ -102,7 +102,7 @@ export function ChatModal({
         data: { message: any };
       }>(`/chat/threads/${thread.id}/messages`, {
         method: "POST",
-        body: JSON.stringify({ content: text }),
+        body: JSON.stringify({ body: text, content: text }),
       });
 
       setMessages((prev) => [...prev, res.data.message]);
@@ -187,7 +187,7 @@ export function ChatModal({
                           isMe ? styles.myBubbleText : styles.otherBubbleText,
                         ]}
                       >
-                        {item.content}
+                        {item.body || item.content}
                       </Text>
                       <Text
                         style={[

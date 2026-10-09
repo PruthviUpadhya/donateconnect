@@ -30,8 +30,14 @@ export const updateTeamMemberSchema = z.object({
 });
 
 export const sendMessageSchema = z.object({
-  body: z.string().min(1, "Message content cannot be empty"),
-});
+  body: z.string().min(1, "Message content cannot be empty").optional(),
+  content: z.string().min(1, "Message content cannot be empty").optional(),
+}).refine((data) => data.body || data.content, {
+  message: "Message content cannot be empty",
+  path: ["body"],
+}).transform((data) => ({
+  body: (data.body || data.content)!.trim(),
+}));
 
 // Helper: resolve user's NGO with role verification
 async function resolveNgoContext(userId: string) {

@@ -16,7 +16,7 @@ export const StatCard: React.FC<StatCardProps> = ({ title, value, subtitle, icon
     <Card style={[styles.card, style]} variant="elevated">
       <View style={styles.header}>
         <Text style={styles.title}>{title}</Text>
-        {icon}
+        {typeof icon === "string" ? <Text style={styles.iconText}>{icon}</Text> : icon}
       </View>
       <Text style={styles.value}>{value}</Text>
       {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
@@ -49,5 +49,8 @@ const styles = StyleSheet.create({
   subtitle: {
     ...Typography.caption,
     color: Colors.accentEmerald,
+  },
+  iconText: {
+    fontSize: 18,
   },
 });

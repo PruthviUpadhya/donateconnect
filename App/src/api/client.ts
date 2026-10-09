@@ -102,7 +102,12 @@ export class ApiClient {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data?.error?.message || `Request failed with status ${response.status}`);
+      let msg = data?.error?.message || `Request failed with status ${response.status}`;
+      if (Array.isArray(data?.error?.details) && data.error.details.length > 0) {
+        const detailMsgs = data.error.details.map((d: any) => `${d.path ? d.path + ": " : ""}${d.message}`).join(", ");
+        msg = `${msg}: ${detailMsgs}`;
+      }
+      throw new Error(msg);
     }
 
     return data as T;

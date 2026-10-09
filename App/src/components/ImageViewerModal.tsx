@@ -128,7 +128,22 @@ export function ImageViewerModal({
             />
           )}
 
-          {!loadError ? (
+          {isPdf && Platform.OS === "web" ? (
+            // On Web: embed PDF viewer directly in the current page/modal without navigating away
+            <View style={styles.webPdfContainer}>
+              {/* @ts-ignore */}
+              <iframe
+                src={currentUri}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  border: "none",
+                  borderRadius: 12,
+                }}
+                title="Document Preview"
+              />
+            </View>
+          ) : !loadError && !isPdf ? (
             <Image
               source={{ uri: currentUri }}
               style={styles.image}
@@ -141,14 +156,16 @@ export function ImageViewerModal({
               }}
             />
           ) : (
-            // PDF or Unsupported Image Fallback Card
+            // PDF Document in-modal card for mobile devices
             <View style={styles.fallbackCard}>
               <View style={styles.fallbackIconCircle}>
                 <FileText size={48} color={Colors.primary} />
               </View>
-              <Text style={styles.fallbackTitle}>Document Preview</Text>
+              <Text style={styles.fallbackTitle}>
+                {title || (isPdf ? "Official PDF Document" : "Document Preview")}
+              </Text>
               <Text style={styles.fallbackDesc}>
-                This file is a PDF document or official certificate. Tap below to inspect or open in full-screen reader.
+                This official file is saved in secure database storage. You can inspect it directly or open with your preferred system viewer.
               </Text>
 
               <TouchableOpacity
@@ -157,7 +174,7 @@ export function ImageViewerModal({
                 onPress={handleOpenExternally}
               >
                 <Download size={18} color="#FFFFFF" />
-                <Text style={styles.openDocButtonText}>Open / View Document</Text>
+                <Text style={styles.openDocButtonText}>Open Document Reader</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -282,6 +299,19 @@ const styles = StyleSheet.create({
   image: {
     width: screenWidth * 0.95,
     height: screenHeight * 0.72,
+  },
+  webPdfContainer: {
+    width: "90%",
+    maxWidth: 960,
+    height: "85%",
+    backgroundColor: "#ffffff",
+    borderRadius: BorderRadius.lg,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 10,
   },
   fallbackCard: {
     backgroundColor: "#ffffff",

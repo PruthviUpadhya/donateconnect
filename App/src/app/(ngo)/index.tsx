@@ -913,11 +913,13 @@ const styles = StyleSheet.create({
   statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    justifyContent: "space-between",
+    gap: 10,
   },
   statCol: {
-    flex: 1,
+    width: "48%",
     minWidth: 140,
+    flexGrow: 1,
   },
   list: {
     gap: Spacing.md,

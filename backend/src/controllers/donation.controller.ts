@@ -466,12 +466,37 @@ export const getNgoDonations = async (req: Request, res: Response, next: NextFun
   }
 };
 
+const SYSTEM_CATEGORIES = [
+  { name: "Food", description: "Fresh, packaged, cooked, or raw food supplies", icon: "utensils" },
+  { name: "Clothes", description: "Wearable garments, shoes, and blankets", icon: "shirt" },
+  { name: "Books", description: "Educational textbooks, novels, and stationery", icon: "book-open" },
+  { name: "Medical supplies", description: "First-aid kits, mobility aids, and OTC medicines", icon: "heart-pulse" },
+  { name: "Electronics", description: "Computers, phones, gadgets, and appliances", icon: "laptop" },
+  { name: "Furniture", description: "Desks, chairs, cots, and storage units", icon: "armchair" },
+  { name: "Other", description: "General utility and uncategorized donations", icon: "box" },
+];
+
 // 7. PUBLIC / DONOR: Get All Donation Categories
 export const getCategories = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const categories = await prisma.donationCategory.findMany({
+    let categories = await prisma.donationCategory.findMany({
       orderBy: { name: "asc" },
     });
+
+    // If categories table is blank, automatically provision baseline categories
+    if (categories.length === 0) {
+      for (const cat of SYSTEM_CATEGORIES) {
+        await prisma.donationCategory.upsert({
+          where: { name: cat.name },
+          update: {},
+          create: cat,
+        });
+      }
+      categories = await prisma.donationCategory.findMany({
+        orderBy: { name: "asc" },
+      });
+    }
+
     res.status(200).json({
       success: true,
       data: { categories },
