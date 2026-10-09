@@ -54,14 +54,18 @@ export class OtpService {
       },
     });
 
-    // Send real Gmail SMTP email (or dev fallback)
-    const result = await emailService.sendOtpEmail({
-      to: email,
-      otp: rawOtp,
-      expiresInMinutes: OTP_EXPIRY_MINUTES,
-    });
+    // Dispatch email asynchronously so slow SMTP handshakes never block the HTTP response!
+    emailService
+      .sendOtpEmail({
+        to: email,
+        otp: rawOtp,
+        expiresInMinutes: OTP_EXPIRY_MINUTES,
+      })
+      .catch((err) => {
+        console.error("⚠️ Background email dispatch error:", err?.message || err);
+      });
 
-    return result;
+    return { success: true, deliveredVia: "smtp" };
   }
 
   /**
