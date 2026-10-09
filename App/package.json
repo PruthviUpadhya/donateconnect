@@ -32,7 +32,13 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "build:web": "npx expo export -p web"
+    "build:web": "npx expo export -p web",
+    "build:android": "npx eas-cli build --platform android",
+    "build:android:apk": "npx eas-cli build --platform android --profile preview",
+    "build:android:local": "npx expo run:android --variant release",
+    "build:ios": "npx eas-cli build --platform ios",
+    "build:ios:simulator": "npx eas-cli build --platform ios --profile preview",
+    "build:ios:local": "npx expo run:ios --configuration Release"
   },
   "private": true
 }

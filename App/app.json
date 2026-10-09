@@ -16,7 +16,8 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.pruthvi.donateconnect"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -24,6 +25,12 @@
     "plugins": [
       "expo-router",
       "expo-secure-store"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "e43ce3ee-caf9-421e-ae1d-53635a70fea1"
+      }
+    }
   }
 }

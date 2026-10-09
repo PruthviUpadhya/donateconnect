@@ -31,8 +31,8 @@ function getBackendUrl(): string {
       }
     }
 
-    // Default LAN IP detected for this machine
-    return "http://172.20.0.40:3000";
+    // Default to deployed backend in standalone builds / when no dev server host is present
+    return "https://donateconnect-zpx6.onrender.com";
   }
 
   return envUrl || "http://localhost:3000";
