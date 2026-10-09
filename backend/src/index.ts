@@ -15,6 +15,7 @@ import collaborationRouter from "./routes/collaboration.route";
 import impactRouter from "./routes/impact.route";
 import { errorMiddleware } from "./middleware/error.middleware";
 
+
 const app = express();
 
 // Security Middleware
