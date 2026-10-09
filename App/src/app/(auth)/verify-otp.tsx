@@ -10,15 +10,13 @@ import { Colors, Spacing, Typography } from "../../theme/colors";
 import { api } from "../../api/client";
 
 export default function VerifyOtpScreen() {
-  const params = useLocalSearchParams<{ email?: string; purpose?: string; otp?: string }>();
+  const params = useLocalSearchParams<{ email?: string; purpose?: string }>();
   const { login } = useAuth();
 
   const [email, setEmail] = useState(params.email || "");
-  const [code, setCode] = useState(params.otp || "");
+  const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(
-    params.otp ? "✨ Verification code detected from preview. Tap Verify & Continue below." : null
-  );
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
 

@@ -12,12 +12,9 @@ const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().default("donateconnect-dev-refresh-secret-key-change-in-prod!"),
   ADMIN_EMAIL: z.string().email().optional(),
   ADMIN_PASSWORD: z.string().optional(),
-  SMTP_HOST: z.string().default("smtp.gmail.com"),
-  SMTP_PORT: z.coerce.number().default(465),
-  SMTP_SECURE: z.coerce.boolean().default(true),
-  SMTP_USER: z.string().optional(),
-  SMTP_PASSWORD: z.string().optional(),
-  SMTP_FROM: z.string().optional(),
+  RESENDER_API_KEY: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(),
+  RESEND_FROM: z.string().optional(),
   CORS_ORIGIN: z.string().default("*"),
 });
 
@@ -38,13 +35,8 @@ export const config = {
   jwtRefreshSecret: env.JWT_REFRESH_SECRET,
   adminEmail: env.ADMIN_EMAIL,
   adminPassword: env.ADMIN_PASSWORD,
-  smtp: {
-    host: env.SMTP_HOST,
-    port: env.SMTP_PORT,
-    secure: env.SMTP_SECURE,
-    user: env.SMTP_USER,
-    password: env.SMTP_PASSWORD,
-    from: env.SMTP_FROM,
-  },
+  resendApiKey: env.RESENDER_API_KEY || env.RESEND_API_KEY || process.env.RESENDER_API_KEY || process.env.RESEND_API_KEY,
+  resendFrom: env.RESEND_FROM || process.env.RESEND_FROM || "DonateConnect <onboarding@resend.dev>",
   corsOrigin: env.CORS_ORIGIN,
 };
+

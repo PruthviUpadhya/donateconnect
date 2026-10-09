@@ -1,4 +1,3 @@
-import nodemailer, { Transporter } from "nodemailer";
 import { config } from "../config/env";
 
 export interface SendOtpEmailParams {
@@ -8,47 +7,26 @@ export interface SendOtpEmailParams {
 }
 
 export class EmailService {
-  private transporter: Transporter | null = null;
-  private isConfigured: boolean = false;
-
-  constructor() {
-    this.initTransporter();
-  }
-
-  private initTransporter(): void {
-    if (config.smtp.user && config.smtp.password) {
-      this.transporter = nodemailer.createTransport({
-        host: config.smtp.host,
-        port: config.smtp.port,
-        secure: config.smtp.port === 465,
-        auth: {
-          user: config.smtp.user,
-          pass: config.smtp.password,
-        },
-        connectionTimeout: 10000, // 10s connection timeout
-        greetingTimeout: 10000,   // 10s greeting timeout
-        socketTimeout: 15000,     // 15s socket timeout
-        family: 4,               // Force IPv4 to prevent IPv6 ENETUNREACH errors
-      } as any);
-      this.isConfigured = true;
-    } else {
-      this.transporter = null;
-      this.isConfigured = false;
-    }
-  }
-
-  public async sendOtpEmail({ to, otp, expiresInMinutes = 10 }: SendOtpEmailParams): Promise<{ success: boolean; deliveredVia: "smtp" | "console" }> {
-    const fromAddress = config.smtp.from || config.smtp.user || "no-reply@donateconnect.org";
-
+  public async sendOtpEmail({
+    to,
+    otp,
+    expiresInMinutes = 10,
+  }: SendOtpEmailParams): Promise<{ success: boolean; deliveredVia: "resend" | "console" | "smtp" }> {
     // Always log OTP to server console as an immediate, foolproof fallback
     console.log("-------------------------------------------------------");
     console.log(`📨 [OTP CODE] Recipient: ${to}`);
     console.log(`🔑 Verification Code: ${otp} (expires in ${expiresInMinutes}m)`);
     console.log("-------------------------------------------------------");
 
-    // Automated test mode: Mock transport immediately without real SMTP overhead
+    // Automated test mode: Mock transport immediately
     if (config.nodeEnv === "test") {
-      return { success: true, deliveredVia: "smtp" };
+      return { success: true, deliveredVia: "resend" };
+    }
+
+    const apiKey = config.resendApiKey;
+    if (!apiKey) {
+      console.warn("⚠️ [RESEND] No RESENDER_API_KEY configured. OTP logged to console only.");
+      return { success: true, deliveredVia: "console" };
     }
 
     const htmlContent = `
@@ -71,53 +49,34 @@ export class EmailService {
       </div>
     `;
 
-    // 1. Resend HTTP REST API (Works 100% on Render over HTTPS port 443)
-    if (process.env.RESEND_API_KEY) {
-      try {
-        const res = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: process.env.RESEND_FROM || "DonateConnect <onboarding@resend.dev>",
-            to,
-            subject: `Your DonateConnect Verification Code: ${otp}`,
-            html: htmlContent,
-          }),
-        });
-        if (res.ok) {
-          console.log(`✅ [RESEND] Email successfully sent to ${to}`);
-          return { success: true, deliveredVia: "smtp" };
-        } else {
-          const errText = await res.text();
-          console.error(`⚠️ [RESEND ERROR]:`, errText);
-        }
-      } catch (resendErr: any) {
-        console.error(`⚠️ [RESEND EXCEPTION]:`, resendErr?.message || resendErr);
-      }
-    }
-
-    if (this.isConfigured && this.transporter) {
-      try {
-        await this.transporter.sendMail({
-          from: `"DonateConnect" <${fromAddress}>`,
-          to,
+    try {
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: config.resendFrom,
+          to: [to],
           subject: `Your DonateConnect Verification Code: ${otp}`,
-          text: `Your DonateConnect verification code is ${otp}. This code expires in ${expiresInMinutes} minutes. If you did not request this code, you can safely ignore this email.`,
           html: htmlContent,
-        });
+        }),
+      });
 
-        console.log(`✅ [SMTP] Email successfully sent to ${to}`);
-        return { success: true, deliveredVia: "smtp" };
-      } catch (err: any) {
-        console.error(`⚠️ [SMTP ERROR] Failed to send email to ${to}:`, err?.message || err);
-        return { success: false, deliveredVia: "console" };
+      if (response.ok) {
+        const data = await response.json().catch(() => ({}));
+        console.log(`✅ [RESEND] Email successfully sent to ${to}:`, data);
+        return { success: true, deliveredVia: "resend" };
+      } else {
+        const errorText = await response.text();
+        console.error(`⚠️ [RESEND ERROR] Status ${response.status}:`, errorText);
+        return { success: true, deliveredVia: "console" };
       }
+    } catch (err: any) {
+      console.error("⚠️ [RESEND EXCEPTION]:", err?.message || err);
+      return { success: true, deliveredVia: "console" };
     }
-
-    return { success: true, deliveredVia: "console" };
   }
 }
 

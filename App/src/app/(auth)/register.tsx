@@ -46,7 +46,6 @@ export default function RegisterScreen() {
         params: {
           email,
           purpose: "EMAIL_VERIFICATION",
-          ...(res?.data?.devOtp ? { otp: res.data.devOtp } : {}),
         },
       });
     } catch (err: any) {

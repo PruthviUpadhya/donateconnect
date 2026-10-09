@@ -64,7 +64,6 @@ export default function LoginScreen() {
           params: {
             email,
             purpose: "EMAIL_VERIFICATION",
-            ...(err?.details?.devOtp ? { otp: err.details.devOtp } : {}),
           },
         });
         return;
