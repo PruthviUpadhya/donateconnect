@@ -1,0 +1,11 @@
+services:
+  # Static Site for Expo Web Frontend
+  - type: static
+    name: donateconnect-frontend
+    buildCommand: cd App && npm install && npm run build:web
+    staticPublishPath: ./App/dist
+    routes:
+      # SPA rewrite rule so direct URL navigation (e.g. /register, /login) serves index.html
+      - type: rewrite
+        source: /*
+        destination: /index.html

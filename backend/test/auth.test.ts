@@ -99,4 +99,30 @@ describe("Phase 2 Authentication & OTP Tests", () => {
     expect(res.status).toBe(201);
     expect(res.body.data.ngo.verificationStatus).toBe("PENDING");
   });
+
+  it("POST /api/v1/auth/register allows unverified user to re-register without EMAIL_ALREADY_EXISTS error", async () => {
+    // testNgoEmail is unverified (status PENDING)
+    const reRegisterRes = await request(app).post("/api/v1/auth/register").send({
+      name: "NGO Director Updated",
+      email: testNgoEmail,
+      password: "NewPassword123!",
+      role: "DONOR",
+      phone: "+91 9988776600",
+    });
+
+    expect(reRegisterRes.status).toBe(200);
+    expect(reRegisterRes.body.success).toBe(true);
+    expect(reRegisterRes.body.message).toContain("unverified");
+  });
+
+  it("POST /api/v1/auth/login returns EMAIL_NOT_VERIFIED and auto-resends OTP for unverified user", async () => {
+    // testNgoEmail is unverified
+    const loginRes = await request(app).post("/api/v1/auth/login").send({
+      email: testNgoEmail,
+      password: "NewPassword123!",
+    });
+
+    expect(loginRes.status).toBe(403);
+    expect(loginRes.body.error.code).toBe("EMAIL_NOT_VERIFIED");
+  });
 });

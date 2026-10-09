@@ -70,13 +70,57 @@ export const register = async (req: Request, res: Response, next: NextFunction):
   try {
     const data = registerSchema.parse(req.body);
 
-    // Prevent duplicate emails
+    // Prevent duplicate emails, or allow unverified user to resend OTP & update credentials
     const existing = await prisma.user.findUnique({ where: { email: data.email } });
     if (existing) {
+      if (existing.status === UserStatus.PENDING && !existing.emailVerifiedAt) {
+        const passwordHash = await bcrypt.hash(data.password, 10);
+        const updatedUser = await prisma.user.update({
+          where: { id: existing.id },
+          data: {
+            name: data.name,
+            passwordHash,
+            role: data.role as Role,
+            phone: data.phone,
+            address: data.address,
+          },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            status: true,
+          },
+        });
+
+        if (data.role === "VOLUNTEER") {
+          await prisma.volunteerProfile.upsert({
+            where: { userId: updatedUser.id },
+            update: {},
+            create: { userId: updatedUser.id },
+          });
+        }
+
+        try {
+          await otpService.createAndSendOtp(updatedUser.id, updatedUser.email, "EMAIL_VERIFICATION");
+        } catch (otpErr: any) {
+          if (otpErr?.code !== "OTP_RATE_LIMITED") {
+            throw otpErr;
+          }
+        }
+
+        res.status(200).json({
+          success: true,
+          message: "Account already exists but is unverified. Verification code is active, please verify your email.",
+          data: { user: updatedUser },
+        });
+        return;
+      }
+
       throw new AppError({
         statusCode: 409,
         code: "EMAIL_ALREADY_EXISTS",
-        message: "An account with this email address already exists",
+        message: "An account with this email address already exists. Please sign in instead.",
       });
     }
 
@@ -128,10 +172,45 @@ export const registerNgo = async (req: Request, res: Response, next: NextFunctio
     // Verify email uniqueness for both user and NGO
     const existingUser = await prisma.user.findUnique({ where: { email: data.email } });
     if (existingUser) {
+      if (existingUser.status === UserStatus.PENDING && !existingUser.emailVerifiedAt) {
+        const passwordHash = await bcrypt.hash(data.password, 10);
+        await prisma.user.update({
+          where: { id: existingUser.id },
+          data: {
+            name: data.ownerName,
+            passwordHash,
+            phone: data.contactNumber,
+            address: data.address,
+          },
+        });
+
+        try {
+          await otpService.createAndSendOtp(existingUser.id, existingUser.email, "EMAIL_VERIFICATION");
+        } catch (otpErr: any) {
+          if (otpErr?.code !== "OTP_RATE_LIMITED") {
+            throw otpErr;
+          }
+        }
+
+        res.status(200).json({
+          success: true,
+          message: "NGO registration updated. A new verification code has been dispatched to your email.",
+          data: {
+            user: {
+              id: existingUser.id,
+              name: existingUser.name,
+              email: existingUser.email,
+              role: existingUser.role,
+            },
+          },
+        });
+        return;
+      }
+
       throw new AppError({
         statusCode: 409,
         code: "EMAIL_ALREADY_EXISTS",
-        message: "An account with this email address already exists",
+        message: "An account with this email address already exists. Please sign in instead.",
       });
     }
 
@@ -335,10 +414,18 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
     }
 
     if (user.status === UserStatus.PENDING && !user.emailVerifiedAt) {
+      // Auto-resend OTP so the unverified user has the newest valid code ready in their inbox
+      try {
+        await otpService.createAndSendOtp(user.id, user.email, "EMAIL_VERIFICATION");
+      } catch (otpErr) {
+        console.error("Auto-resend OTP error during unverified login:", otpErr);
+      }
+
       throw new AppError({
         statusCode: 403,
         code: "EMAIL_NOT_VERIFIED",
-        message: "Please verify your email address with the OTP before logging in",
+        message: "Please verify your email address. A fresh verification code has been dispatched to your email.",
+        details: { email: user.email, unverified: true },
       });
     }
 

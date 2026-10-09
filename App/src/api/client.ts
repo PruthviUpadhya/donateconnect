@@ -13,6 +13,21 @@ export interface ApiUser {
   status: string;
 }
 
+export class ApiError extends Error {
+  public code?: string;
+  public status: number;
+  public details?: any;
+
+  constructor(message: string, status: number, code?: string, details?: any) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+    this.details = details;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 export class ApiClient {
   private baseUrl: string;
   private isRefreshing: boolean = false;
@@ -107,7 +122,7 @@ export class ApiClient {
         const detailMsgs = data.error.details.map((d: any) => `${d.path ? d.path + ": " : ""}${d.message}`).join(", ");
         msg = `${msg}: ${detailMsgs}`;
       }
-      throw new Error(msg);
+      throw new ApiError(msg, response.status, data?.error?.code, data?.error?.details);
     }
 
     return data as T;

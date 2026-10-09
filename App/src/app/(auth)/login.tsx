@@ -52,6 +52,20 @@ export default function LoginScreen() {
       else if (role === "ADMIN") router.replace("/(admin)");
       else router.replace("/");
     } catch (err: any) {
+      const isUnverified =
+        err?.code === "EMAIL_NOT_VERIFIED" ||
+        err?.message?.toLowerCase().includes("verify your email") ||
+        err?.message?.toLowerCase().includes("not verified");
+
+      if (isUnverified) {
+        // Unverified user -> redirect immediately to OTP verification page
+        router.push({
+          pathname: "/(auth)/verify-otp",
+          params: { email, purpose: "EMAIL_VERIFICATION" },
+        });
+        return;
+      }
+
       setError(err.message || "Failed to log in");
     } finally {
       setLoading(false);

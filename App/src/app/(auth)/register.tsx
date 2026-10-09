@@ -84,6 +84,16 @@ export default function RegisterScreen() {
           {error && (
             <View style={styles.errorBox}>
               <Text style={styles.errorText}>{error}</Text>
+              {error.toLowerCase().includes("already exists") && (
+                <TouchableOpacity
+                  style={{ marginTop: 6 }}
+                  onPress={() => router.push("/(auth)/login")}
+                >
+                  <Text style={[styles.errorText, { fontWeight: "700", textDecorationLine: "underline" }]}>
+                    Click here to Sign In →
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
 
