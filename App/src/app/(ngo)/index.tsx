@@ -842,6 +842,7 @@ export default function NgoDashboardScreen() {
           visible={!!activeRatingDonation}
           donationId={activeRatingDonation?.id || ""}
           targetRole={ratingTargetRole}
+          currentRole="NGO"
           targetName={
             ratingTargetRole === "DONOR"
               ? activeRatingDonation?.donor?.name

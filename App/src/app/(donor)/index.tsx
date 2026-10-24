@@ -417,6 +417,7 @@ export default function DonorDashboardScreen() {
           visible={!!activeRatingDonation}
           donationId={activeRatingDonation?.id || ""}
           targetRole={ratingTargetRole}
+          currentRole="DONOR"
           targetName={
             ratingTargetRole === "NGO"
               ? activeRatingDonation?.acceptedByNgo?.name

@@ -17,6 +17,7 @@ interface RatingModalProps {
   onClose: () => void;
   donationId: string;
   targetRole: "NGO" | "VOLUNTEER" | "DONOR";
+  currentRole?: "DONOR" | "NGO";
   targetName?: string;
   onSuccess?: () => void;
 }
@@ -26,6 +27,7 @@ export function RatingModal({
   onClose,
   donationId,
   targetRole,
+  currentRole = "DONOR",
   targetName,
   onSuccess,
 }: RatingModalProps) {
@@ -36,10 +38,25 @@ export function RatingModal({
   const handleSubmit = async () => {
     try {
       setLoading(true);
+
+      // Derive the exact RatingKind enum required by backend
+      let kind: "DONOR_TO_NGO" | "NGO_TO_DONOR" | "DONOR_TO_VOLUNTEER" | "NGO_TO_VOLUNTEER" = "DONOR_TO_NGO";
+      if (targetRole === "NGO") {
+        kind = "DONOR_TO_NGO";
+      } else if (targetRole === "DONOR") {
+        kind = "NGO_TO_DONOR";
+      } else if (targetRole === "VOLUNTEER") {
+        kind = currentRole === "NGO" ? "NGO_TO_VOLUNTEER" : "DONOR_TO_VOLUNTEER";
+      }
+
       await api.request("/ratings", {
         method: "POST",
         body: JSON.stringify({
           donationId,
+          kind,
+          score: stars,
+          comment: feedback.trim() || undefined,
+          // Fallback legacy attributes
           targetRole,
           rating: stars,
           feedback: feedback.trim() || undefined,

@@ -72,7 +72,24 @@ async function resolveNgoContext(userId: string) {
  */
 export const createRating = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const data = createRatingSchema.parse(req.body);
+    const rawBody = req.body || {};
+    let kind = rawBody.kind;
+    if (!kind && rawBody.targetRole) {
+      if (rawBody.targetRole === "NGO") kind = "DONOR_TO_NGO";
+      else if (rawBody.targetRole === "DONOR") kind = "NGO_TO_DONOR";
+      else if (rawBody.targetRole === "VOLUNTEER") {
+        kind = req.user?.role === Role.NGO ? "NGO_TO_VOLUNTEER" : "DONOR_TO_VOLUNTEER";
+      }
+    }
+    const score = rawBody.score ?? rawBody.rating;
+    const comment = rawBody.comment ?? rawBody.feedback;
+
+    const data = createRatingSchema.parse({
+      donationId: rawBody.donationId,
+      kind,
+      score,
+      comment,
+    });
     const fromUserId = req.user!.userId;
 
     // Verify donation exists and is delivered

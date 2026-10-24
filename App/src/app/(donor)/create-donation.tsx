@@ -23,6 +23,7 @@ const DEFAULT_ICONS: Record<string, string> = {
   "Medical supplies": "💊",
   Electronics: "💻",
   Furniture: "🪑",
+  Toys: "🧸",
   Other: "📦",
 };
 
@@ -94,6 +95,7 @@ export default function CreateDonationScreen() {
         { id: "seed-med", name: "Medical supplies", icon: "💊" },
         { id: "seed-elec", name: "Electronics", icon: "💻" },
         { id: "seed-furn", name: "Furniture", icon: "🪑" },
+        { id: "seed-toys", name: "Toys", icon: "🧸" },
         { id: "seed-other", name: "Other", icon: "📦" },
       ]);
     }

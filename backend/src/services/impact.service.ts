@@ -57,6 +57,12 @@ const CATEGORY_BENCHMARKS: Record<string, {
     benefitUnit: "Shelter Residents Provided Furnishings",
     template: (qty) => `Furnishes temporary shelter homes or classrooms, comfortably accommodating ~${Math.round(qty * 2)} residents.`,
   },
+  toys: {
+    peopleMultiplier: 1.5,
+    co2MultiplierKg: 1.2,
+    benefitUnit: "Children Supported with Play & Joy",
+    template: (qty) => `Brings happiness and recreational play to approximately ${Math.round(qty * 1.5)} children in community centers and orphanages.`,
+  },
 };
 
 export function estimateImpact(categoryName: string, quantity: number): ImpactEstimate {
